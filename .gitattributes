@@ -1,0 +1,9 @@
+* text=auto
+*.sh text eol=lf
+*.swift text eol=lf
+*.bin binary
+*.bak binary
+**/blobs/** binary
+*.png binary
+*.webp binary
+*.a binary
