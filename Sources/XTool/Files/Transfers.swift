@@ -418,6 +418,47 @@ extension AppModel {
         }
     }
 
+    // MARK: new master key
+
+    /// Encrypts everything again under a new master key, optionally with a new password (Vault.renewMasterKey).
+    /// Open documents save and close first; the window stays blocked until the job is done.
+    func renewMasterKey(password: String, newPassword: String? = nil) {
+        guard let vault, transfer == nil else {
+            showToast("Please wait until the running transfer has finished.")
+            return
+        }
+        NotificationCenter.default.post(name: .xtoolWillLock, object: nil) // documents save themselves
+        flush()
+        tabs = []
+        activeTabId = nil
+        focusMode = false
+        renewingKey = true
+        runJob(title: "Encrypting everything with a new key") { [self] token in
+            defer { renewingKey = false }
+            setProgress(detail: "Checking the password …", done: 0, total: 1)
+            let pump = ProgressPump { [weak self] permille in self?.setProgress(detail: "Encrypting files again", done: permille, total: 1000) }
+            do {
+                let ok = try await Task.detached(priority: .userInitiated) {
+                    try vault.renewMasterKey(password: password, newPassword: newPassword) { done, total in
+                        try token.check()
+                        pump.report(total > 0 ? done * 1000 / total : 1000)
+                    }
+                }.value
+                guard ok else {
+                    alert = AlertInfo(title: "Wrong password", message: "Nothing was changed.")
+                    return
+                }
+                if let newPassword { passwordNeedsUpgrade = !PasswordPolicy.evaluate(newPassword).isAcceptable }
+                alert = AlertInfo(title: "New key in place",
+                                  message: "Everything in xTool is now encrypted with a new key\(newPassword == nil ? "" : " and protected by your new password"). Old backups and old copies of the vault still open with the old password: create a new backup and delete the old ones.")
+            } catch is CancellationError {
+                showToast("Cancelled. Nothing was changed.")
+            } catch {
+                report(error, title: "No new key")
+            }
+        }
+    }
+
     private nonisolated static func vaultSize(_ vault: Vault) -> Int64 {
         guard let e = FileManager.default.enumerator(at: vault.root, includingPropertiesForKeys: [.fileSizeKey]) else { return 0 }
         var total: Int64 = 0

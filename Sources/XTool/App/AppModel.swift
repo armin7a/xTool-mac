@@ -97,6 +97,8 @@ final class AppModel {
     var passwordNeedsUpgrade = false
     /// Shown on the lock screen: what happened as the vault locked.
     var lockNotice: String?
+    /// A new master key is being made: the window is blocked until it is done.
+    var renewingKey = false
 
     @ObservationIgnored private(set) var vault: Vault?
     @ObservationIgnored private(set) var drive: Drive?
@@ -190,10 +192,19 @@ final class AppModel {
     /// Open documents save themselves first, then the index is written, then the key is wiped.
     func lock(_ reason: LockReason = .user) {
         guard let vault else { return }
+        if renewingKey && reason == .user {
+            showToast("Please wait until the new key is in place.")
+            return
+        }
         NotificationCenter.default.post(name: .xtoolWillLock, object: nil)
         saveTask?.cancel()
         do {
-            try vault.saveIndex()
+            if renewingKey {
+                // the window was blocked, so nothing changed since the renewal took its copy of the index
+                lockNotice = "Locking interrupted the new key. If it had not finished, nothing was changed: you can start it again in Settings."
+            } else {
+                try vault.saveIndex()
+            }
         } catch {
             // The user can react: stay open rather than lose changes.
             // Sleep or a locked screen can't wait: lock anyway and say so afterwards.

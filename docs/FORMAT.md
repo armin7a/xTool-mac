@@ -55,3 +55,24 @@ A ZIP file with `vault.json`, `index.bin`, `index.bak` and `blobs/` unchanged. T
 Only `vault.json` is rewritten; the master key stays the same. That keeps the change fast. It also means: whoever has an
 old `vault.json` or backup and the old password can decrypt newer data too, if they get hold of the encrypted files.
 See [THREAT_MODEL.md](THREAT_MODEL.md#changing-the-password).
+
+## Renewing the master key
+
+A new random master key replaces the old one; the format stays version 1. Every blob keeps its ID and is encrypted
+again with a fresh salt under the new key; the index is sealed with the new key.
+
+Everything new is first written to `rekey/` inside the vault folder:
+
+```
+rekey/blobs/ab/abcd…   the re-encrypted blobs
+rekey/keep.txt         IDs of all blobs that belong to the vault afterwards, one per line
+rekey/index.bin        the index sealed with the new key
+rekey/vault.json       the new key, wrapped with the password
+```
+
+The commit point is the atomic rename of `rekey/vault.json` to `vault.json`. When a vault is opened:
+
+- `rekey/vault.json` exists: the renewal never committed. `rekey/` is deleted; the vault is unchanged.
+- `rekey/` exists without `vault.json`: the renewal committed. `rekey/index.bin` becomes `index.bin` (and `index.bak`),
+  the blobs in `rekey/blobs` replace those in `blobs/`, every blob not listed in `keep.txt` is overwritten and deleted,
+  and `rekey/` is removed. All of this needs no key.

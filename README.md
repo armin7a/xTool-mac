@@ -18,7 +18,7 @@ xTool has no network access at all.
 
 ## Install
 
-1. Build the app (see [Build it yourself](#build-it-yourself)). This creates `dist/xTool-2.1.0.dmg`.
+1. Build the app (see [Build it yourself](#build-it-yourself)). This creates `dist/xTool-2.2.0.dmg`.
    Every push to `main` also builds a DMG on GitHub (Actions → macOS build → Artifacts).
 2. Open the DMG and drag **xTool** into the Applications folder. An existing vault is kept.
 
@@ -57,6 +57,10 @@ it estimates what an attacker would try: known passwords, words, keyboard rows, 
 `Summer2024!` fails, four random words pass. **Suggest Password** creates six random words.
 
 An existing weaker password keeps working; xTool then recommends changing it. **Nobody can reset a forgotten password.**
+
+When you change the password, xTool can also **encrypt everything again with a new key** (on by default), so that old
+copies of the vault, for example in a backup, open nothing with the old password. You can also do this on its own:
+Settings → Encryption key → Renew. It is safe against crashes and power loss.
 
 ### Isolation
 

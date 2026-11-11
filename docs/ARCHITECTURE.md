@@ -36,6 +36,9 @@ docs/                 This file, the vault format and the threat model
 - **Files only appear when complete.** Everything is written to a temporary file and renamed afterwards. This applies to exports too.
 - **Exports are cleaned where possible.** `MetadataScrubber` cleans the exported copy, checks it again and only then
   replaces it. A file that cannot be cleaned is left as it was and reported.
+- **A new master key never touches the live vault until one atomic rename.** `Vault.renewMasterKey` writes into `rekey/`,
+  and `Vault.open` completes or discards an interrupted renewal. While it runs, every read and write fails with `VaultError.busy`
+  and an index sealed under an older key is never written.
 - **On lock, documents save first**, then the index, then the key is wiped (`AppModel.lock`).
 - **The look lives in `Design/DesignSystem.swift`.** Colors and button styles are only defined there.
 - **Multi-line text only goes through `PrivateTextView`.** That keeps Writing Tools, Services and web search away from the content. Do not use SwiftUI's `TextEditor`.

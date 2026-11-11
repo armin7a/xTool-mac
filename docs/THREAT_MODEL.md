@@ -49,7 +49,7 @@ Be honest with yourself about these. Most real attacks on journalists and activi
 5. Make **backups** (`.xvault`) to an external drive you keep somewhere else. They stay encrypted.
 6. Before a border crossing or a search, **shut the Mac down**. A locked xTool on a running Mac is safe, but a Mac that is off
    is safer still: the operating system then holds no keys in memory at all.
-7. If you think your password was seen, **change it**, then read [Changing the password](#changing-the-password).
+7. If you think your password was seen, **change it with "Also encrypt everything with a new key" on**, then make a new backup and delete the old ones. See [Changing the password](#changing-the-password).
 
 ## Metadata
 
@@ -71,14 +71,23 @@ or a reflection in a photo, the text of a document, a printer's tracking dots, o
 ## Changing the password
 
 The password does not encrypt your files directly. It unlocks a random 256-bit master key, and the master key encrypts
-the files. Changing the password re-wraps the master key with the new password: this takes a second, even for a vault of 100 GB.
+the files. Changing the password alone re-wraps the master key with the new password: this takes a second, even for a vault of 100 GB.
 
-The consequence: anyone who has an **old copy** of `vault.json` (for example from Time Machine or an old `.xvault` backup)
-**and** knows the **old password** can still recover the master key. If they also get a copy of the encrypted files,
-they can read them, including files added later.
+The catch: anyone who has an **old copy** of `vault.json` (for example from Time Machine or an old `.xvault` backup)
+**and** knows the **old password** can still recover the old master key. With a copy of the encrypted files they could read them.
 
-So if your old password was compromised: change it, then create a fresh backup and delete old backups and old Time Machine
-snapshots of the vault. A future version will offer to re-encrypt everything with a new master key.
+That is why changing the password offers **"Also encrypt everything with a new key"** (on by default), and why
+**Settings → Encryption key → Renew** exists on its own. It creates a new random master key and encrypts every file,
+version, thumbnail, note and task again with it. Old copies of `vault.json` then fit nothing that is in the vault any more.
+
+- It takes about as long as copying the vault, and needs that much free space for a moment.
+- It is safe against crashes and power loss: everything new is written next to the vault first, and a single atomic
+  rename switches over. Interrupted before that moment, nothing has changed; interrupted after it, xTool finishes on the next start.
+- The old encrypted files are overwritten and deleted. On SSDs and in Time Machine snapshots, old copies may still
+  exist physically, but they are encrypted with the old key and need the old password.
+
+So if your old password may be known: change it with the new key option on, then create a fresh backup and delete
+old backups and old Time Machine snapshots of the vault.
 
 ## Hidden vaults
 

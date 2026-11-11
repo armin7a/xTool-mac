@@ -6,6 +6,7 @@ import XToolCore
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @State private var changingPassword = false
+    @State private var renewingKey = false
     @State private var restore = RestoreRequest()
 
     var body: some View {
@@ -25,6 +26,12 @@ struct SettingsView: View {
                         LabeledContent("Master password") {
                             Button("Change …") { changingPassword = true }
                         }
+                    }
+                    LabeledContent {
+                        Button("Renew …") { renewingKey = true }
+                    } label: {
+                        Text("Encryption key")
+                        Text("Encrypts everything again with a new key, so old copies of the vault no longer fit what is in it.")
                     }
                     Picker("Lock automatically", selection: Binding(get: { model.settings.autoLockMinutes }, set: { model.settings.autoLockMinutes = $0 })) {
                         Text("After 1 minute").tag(1)
@@ -104,6 +111,7 @@ struct SettingsView: View {
             .scrollContentBackground(.hidden)
         }
         .sheet(isPresented: $changingPassword) { ChangePasswordSheet() }
+        .sheet(isPresented: $renewingKey) { RenewKeySheet() }
         .modifier(RestorePrompt(request: $restore))
     }
 
@@ -143,6 +151,8 @@ struct ChangePasswordSheet: View {
     @State private var confirmation = ""
     @State private var error: String?
     @State private var busy = false
+    @State private var newKey = true
+    @State private var vaultSize: Int64 = 0
 
     private var canChange: Bool {
         !busy && !current.isEmpty && NewPasswordForm.isValid(password: new, confirmation: confirmation, previous: current)
@@ -153,7 +163,13 @@ struct ChangePasswordSheet: View {
             VStack(alignment: .leading, spacing: 14) {
                 PasswordField(title: "Current Password", text: $current, revealed: $revealCurrent)
                 NewPasswordForm(password: $new, confirmation: $confirmation, previous: current, onSubmit: change)
-                Text("Older backups still open with the old password. It is best to create a new one afterwards.")
+                Toggle(isOn: $newKey) {
+                    Text("Also encrypt everything with a new key")
+                    Text("Recommended if someone may know your old password: an old copy of the vault then opens nothing. Takes as long as copying \(FileTypes.size(vaultSize)).")
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .toggleStyle(.checkbox)
+                Text("Older backups still open with the old password. Create a new backup afterwards and delete the old ones.")
                     .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 if let error { Text(error).font(.system(size: 12)).foregroundStyle(XColor.danger) }
             }
@@ -162,6 +178,7 @@ struct ChangePasswordSheet: View {
             Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
             Button("Change", action: change).keyboardShortcut(.defaultAction).buttonStyle(.xPrimary).disabled(!canChange)
         }
+        .task { vaultSize = await Task.detached { [vault = model.vault] in vault?.renewalSize() ?? 0 }.value }
     }
 
     private func change() {
@@ -169,6 +186,18 @@ struct ChangePasswordSheet: View {
         busy = true
         error = nil
         let (old, newPassword) = (current, new)
+        if newKey {
+            // check here, so a typo is answered in the sheet; the renewal checks again
+            Task {
+                let header = vault.header
+                let ok = (try? await Task.detached(priority: .userInitiated) { try Vault.checkPassword(header: header, password: old) }.value) ?? false
+                busy = false
+                guard ok else { error = "The current password is not correct."; return }
+                dismiss()
+                model.renewMasterKey(password: old, newPassword: newPassword)
+            }
+            return
+        }
         Task {
             do {
                 let ok = try await Task.detached(priority: .userInitiated) { try vault.changePassword(old: old, new: newPassword) }.value
@@ -184,6 +213,51 @@ struct ChangePasswordSheet: View {
                 busy = false
                 self.error = error.localizedDescription
             }
+        }
+    }
+}
+
+/// Asks for the password, then encrypts everything again with a new master key. The password stays the same.
+struct RenewKeySheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State private var password = ""
+    @State private var revealed = false
+    @State private var error: String?
+    @State private var busy = false
+    @State private var vaultSize: Int64 = 0
+
+    var body: some View {
+        SheetLayout(title: "Renew Encryption Key", width: 420) {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("xTool creates a new random key and encrypts every file, note and task again with it. Your password stays the same.")
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Do this if someone may have had your password and a copy of the vault, for example a backup or a Time Machine copy. Those old copies then open nothing that is in xTool from now on.")
+                    .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text("It takes about as long as copying \(FileTypes.size(vaultSize)) and needs that much free space. If xTool quits or the Mac turns off meanwhile, nothing is lost.")
+                    .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                PasswordField(title: "Password", text: $password, revealed: $revealed, onSubmit: start)
+                if let error { Text(error).font(.system(size: 12)).foregroundStyle(XColor.danger) }
+            }
+        } buttons: {
+            if busy { ProgressView().controlSize(.small) }
+            Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
+            Button("Renew Key", action: start).keyboardShortcut(.defaultAction).buttonStyle(.xPrimary).disabled(busy || password.isEmpty)
+        }
+        .task { vaultSize = await Task.detached { [vault = model.vault] in vault?.renewalSize() ?? 0 }.value }
+    }
+
+    private func start() {
+        guard !busy, !password.isEmpty, let vault = model.vault else { return }
+        busy = true
+        error = nil
+        let (pw, header) = (password, vault.header)
+        Task {
+            let ok = (try? await Task.detached(priority: .userInitiated) { try Vault.checkPassword(header: header, password: pw) }.value) ?? false
+            busy = false
+            guard ok else { error = "The password is not correct."; return }
+            dismiss()
+            model.renewMasterKey(password: pw)
         }
     }
 }

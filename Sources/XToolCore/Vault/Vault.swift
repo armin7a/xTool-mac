@@ -7,6 +7,8 @@ public enum VaultError: Error, LocalizedError {
     case invalidBackup
     case newerFormat
     case notEnoughSpace(needed: Int64, available: Int64)
+    case busy
+    case renewalUnfinished(String)
 
     public var errorDescription: String? {
         switch self {
@@ -18,6 +20,9 @@ public enum VaultError: Error, LocalizedError {
         case .notEnoughSpace(let needed, let available):
             let f = ByteCountFormatter.string(fromByteCount:countStyle:)
             return "Not enough free space: \(f(needed, .file)) needed, \(f(available, .file)) available."
+        case .busy: return "The vault is being re-encrypted. Please wait until it has finished."
+        case .renewalUnfinished(let detail):
+            return "The new key is in place, but tidying up did not finish (\(detail)). Quit and reopen xTool to complete it."
         }
     }
 }
@@ -35,6 +40,10 @@ public final class Vault {
     public private(set) var header: VaultHeader
     private let keyLock = NSLock()
     private var masterKey: SecretKey?
+    /// Counts master keys: an index sealed under an older key is never written.
+    private var keyEpoch = 0
+    /// While a new master key is being made, nothing else may read or write content.
+    private var renewing = false
     private let writeQueue = DispatchQueue(label: "xtool.vault.write")
 
     public var index = VaultIndex()
@@ -86,6 +95,7 @@ public final class Vault {
     }
 
     public static func open(at root: URL) throws -> Vault {
+        try finishInterruptedRenewal(root: root)
         let data = try Data(contentsOf: root.appendingPathComponent("vault.json"))
         let header = try XJSON.decoder().decode(VaultHeader.self, from: data)
         guard header.version <= formatVersion else { throw VaultError.newerFormat }
@@ -195,23 +205,38 @@ public final class Vault {
 
     public func waitForWrites() { writeQueue.sync {} }
 
-    private func sealIndex() throws -> Data {
-        var json = try XJSON.encoder().encode(index)
-        defer { json.resetBytes(in: 0..<json.count) }
-        return try Aead.seal(key: try key(), plaintext: json, aad: Vault.indexAad)
+    private struct SealedIndex { let data: Data; let epoch: Int }
+
+    private func sealIndex() throws -> SealedIndex {
+        let (key, epoch) = try keyAndEpoch()
+        return SealedIndex(data: try sealIndex(index, key: key), epoch: epoch)
     }
 
-    private func writeIndexFile(_ sealed: Data) throws {
+    private func sealIndex(_ index: VaultIndex, key: Data) throws -> Data {
+        var json = try XJSON.encoder().encode(index)
+        defer { json.resetBytes(in: 0..<json.count) }
+        return try Aead.seal(key: key, plaintext: json, aad: Vault.indexAad)
+    }
+
+    private func writeIndexFile(_ sealed: SealedIndex) throws {
+        keyLock.lock()
+        let current = keyEpoch, busy = renewing
+        keyLock.unlock()
+        guard sealed.epoch == current, !busy else { throw VaultError.busy }
         let fm = FileManager.default
         if fm.fileExists(atPath: indexURL.path) {
             try? fm.removeItem(at: indexBackupURL)
             try? fm.copyItem(at: indexURL, to: indexBackupURL)
         }
-        try writeDurably(sealed, to: indexURL)
+        try writeDurably(sealed.data, to: indexURL)
     }
 
     /// Temp file, flushed to the physical disk, then an atomic rename(2): a crash leaves the old or the new file, never half.
     private func writeDurably(_ data: Data, to url: URL) throws {
+        try Vault.writeDurably(data, to: url)
+    }
+
+    private static func writeDurably(_ data: Data, to url: URL) throws {
         let tmp = url.appendingPathExtension("tmp")
         let fm = FileManager.default
         try? fm.removeItem(at: tmp)
@@ -285,8 +310,10 @@ public final class Vault {
 
     // MARK: blobs
 
-    private func blobURL(_ id: String) -> URL {
-        blobsURL.appendingPathComponent(String(id.prefix(2)), isDirectory: true).appendingPathComponent(id)
+    private func blobURL(_ id: String) -> URL { Vault.blobURL(id, in: blobsURL) }
+
+    private static func blobURL(_ id: String, in folder: URL) -> URL {
+        folder.appendingPathComponent(String(id.prefix(2)), isDirectory: true).appendingPathComponent(id)
     }
 
     /// Writes a new blob through a temp file; it appears under its final name only when complete and on disk.
@@ -408,7 +435,171 @@ public final class Vault {
     /// Overwrites with random bytes, then deletes.
     public func deleteBlob(_ id: String?) {
         guard let id, !id.isEmpty else { return }
-        let url = blobURL(id)
+        Vault.overwriteAndDelete(blobURL(id))
+    }
+
+    /// Temp files of an interrupted write. They hold only encrypted data and are never referenced.
+    private func removeLeftoverTempFiles() {
+        let fm = FileManager.default
+        guard let e = fm.enumerator(at: blobsURL, includingPropertiesForKeys: nil) else { return }
+        for case let url as URL in e where url.pathExtension == "tmp" { try? fm.removeItem(at: url) }
+    }
+
+    // MARK: new master key
+
+    // Changing the password only re-wraps the master key. Renewing replaces the key itself: every blob and the index
+    // are encrypted again under a new random key, so an old vault.json or backup together with an old password
+    // opens nothing that exists from now on.
+    //
+    // Crash safety: everything new is written to rekey/ first, the live vault stays untouched. The single commit point
+    // is the atomic rename of rekey/vault.json over vault.json. Before it, rekey/ is thrown away on the next start;
+    // after it, the next start completes the move (finishInterruptedRenewal). The format of the vault does not change.
+
+    static let renewalFolder = "rekey"
+    /// Tests: behave like a crash right after the commit point.
+    nonisolated(unsafe) static var stopAfterCommitForTesting = false
+    private static let keepList = "keep.txt"
+
+    /// Ids of every blob the index refers to, in the trash and in versions too.
+    public func referencedBlobIds() -> [String] {
+        var ids: [String] = []
+        for node in index.nodes {
+            ids += [node.blobId, node.thumbBlobId].compactMap { $0 }
+            ids += (node.versions ?? []).map(\.blobId)
+        }
+        var seen = Set<String>()
+        return ids.filter { !$0.isEmpty && seen.insert($0).inserted }
+    }
+
+    /// Bytes the renewal needs on disk: one more copy of everything the index refers to.
+    public func renewalSize() -> Int64 {
+        referencedBlobIds().reduce(Int64(0)) { sum, id in
+            sum + Int64((try? blobURL(id).resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+        }
+    }
+
+    /// Encrypts everything again under a new random master key, protected by `newPassword` (or the current one).
+    /// Returns false if `password` is wrong. `progress` reports bytes done and may throw to cancel, until the commit.
+    /// Nothing else may use the vault meanwhile; reads and writes fail with `VaultError.busy`.
+    public func renewMasterKey(password: String, newPassword: String? = nil, params: KdfParams = .default,
+                               progress: ((_ done: Int64, _ total: Int64) throws -> Void)? = nil) throws -> Bool {
+        guard try Vault.unwrap(header: header, password: password) != nil else { return false }
+        let oldKey = try key()
+        let snapshot = index
+        let ids = referencedBlobIds().filter(blobExists)
+        let total = renewalSize()
+        try DiskSpace.ensure(total, at: root)
+
+        writeQueue.sync {} // index writes already queued go out under the old key first
+        keyLock.lock(); renewing = true; keyLock.unlock()
+        var committed = false
+        defer {
+            keyLock.lock(); renewing = false; keyLock.unlock()
+            if !committed { try? FileManager.default.removeItem(at: root.appendingPathComponent(Vault.renewalFolder)) }
+        }
+
+        let fm = FileManager.default
+        let staging = root.appendingPathComponent(Vault.renewalFolder, isDirectory: true)
+        try? fm.removeItem(at: staging)
+        let stagedBlobs = staging.appendingPathComponent("blobs", isDirectory: true)
+        try fm.createDirectory(at: stagedBlobs, withIntermediateDirectories: true)
+
+        var newKey = Aead.randomBytes(Aead.keySize)
+        defer { newKey.resetBytes(in: 0..<newKey.count) }
+
+        var done: Int64 = 0
+        try progress?(0, total)
+        for id in ids {
+            let target = Vault.blobURL(id, in: stagedBlobs)
+            try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+            let tmp = target.appendingPathExtension("tmp")
+            guard fm.createFile(atPath: tmp.path, contents: nil) else { throw CocoaError(.fileWriteUnknown) }
+            let input = try FileHandle(forReadingFrom: blobURL(id))
+            defer { try? input.close() }
+            let output = try FileHandle(forWritingTo: tmp)
+            do {
+                let base = done
+                _ = try BlobCipher.reencrypt(
+                    read: { try input.read(upToCount: $0) ?? Data() },
+                    write: { try output.write(contentsOf: $0) },
+                    masterKey: oldKey, fromBlobId: id, toBlobId: id, newMasterKey: newKey,
+                    progress: { bytes in try progress?(base + bytes, total) })
+                try output.synchronize()
+                _ = fcntl(output.fileDescriptor, F_FULLFSYNC)
+                try output.close()
+            } catch {
+                try? output.close()
+                throw error
+            }
+            guard rename(tmp.path, target.path) == 0 else { throw CocoaError(.fileWriteUnknown) }
+            done += Int64((try? target.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+            try progress?(done, total)
+        }
+
+        try Vault.writeDurably(Data(ids.joined(separator: "\n").utf8), to: staging.appendingPathComponent(Vault.keepList))
+        try Vault.writeDurably(try sealIndex(snapshot, key: newKey), to: staging.appendingPathComponent("index.bin"))
+        var newHeader = try Vault.wrap(masterKey: newKey, password: newPassword ?? password, params: params)
+        newHeader.created = header.created
+        try Vault.writeDurably(try XJSON.encoder().encode(newHeader), to: staging.appendingPathComponent("vault.json"))
+
+        // the commit point
+        guard rename(staging.appendingPathComponent("vault.json").path, headerURL.path) == 0 else {
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+        }
+        committed = true
+        if Vault.stopAfterCommitForTesting { return true }
+        keyLock.lock()
+        if masterKey != nil { masterKey = SecretKey(copying: newKey) } // locked meanwhile: stays locked
+        keyEpoch += 1
+        keyLock.unlock()
+        header = newHeader
+        do {
+            try Vault.finishInterruptedRenewal(root: root)
+        } catch {
+            throw VaultError.renewalUnfinished(error.localizedDescription)
+        }
+        return true
+    }
+
+    /// Completes or discards a renewal that a crash interrupted. Needs no key: it only moves and deletes files.
+    static func finishInterruptedRenewal(root: URL) throws {
+        let fm = FileManager.default
+        let staging = root.appendingPathComponent(renewalFolder, isDirectory: true)
+        guard fm.fileExists(atPath: staging.path) else { return }
+        // not committed: the live vault is complete and untouched
+        if fm.fileExists(atPath: staging.appendingPathComponent("vault.json").path) {
+            try fm.removeItem(at: staging)
+            return
+        }
+        let blobs = root.appendingPathComponent("blobs", isDirectory: true)
+        // Written before the commit. If it can't be read, stop: guessing would delete content.
+        let keep = Set(try String(contentsOf: staging.appendingPathComponent(keepList), encoding: .utf8)
+            .split(separator: "\n").map(String.init))
+
+        let stagedIndex = staging.appendingPathComponent("index.bin")
+        if fm.fileExists(atPath: stagedIndex.path) {
+            try writeDurably(try Data(contentsOf: stagedIndex), to: root.appendingPathComponent("index.bak"))
+            guard rename(stagedIndex.path, root.appendingPathComponent("index.bin").path) == 0 else { throw CocoaError(.fileWriteUnknown) }
+        }
+        let stagedBlobs = staging.appendingPathComponent("blobs", isDirectory: true)
+        if let e = fm.enumerator(at: stagedBlobs, includingPropertiesForKeys: nil) {
+            for case let url as URL in e where url.pathExtension.isEmpty && keep.contains(url.lastPathComponent) {
+                let target = blobURL(url.lastPathComponent, in: blobs)
+                try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+                guard rename(url.path, target.path) == 0 else { throw CocoaError(.fileWriteUnknown) }
+            }
+        }
+        // Anything else was encrypted under the old key and is referenced by nothing.
+        if let e = fm.enumerator(at: blobs, includingPropertiesForKeys: nil) {
+            for case let url as URL in e where !keep.contains(url.lastPathComponent) {
+                var isDir: ObjCBool = false
+                if fm.fileExists(atPath: url.path, isDirectory: &isDir), !isDir.boolValue { overwriteAndDelete(url) }
+            }
+        }
+        try fm.removeItem(at: staging)
+    }
+
+    private static func overwriteAndDelete(_ url: URL) {
         if let handle = try? FileHandle(forWritingTo: url) {
             let size = (try? handle.seekToEnd()) ?? 0
             try? handle.seek(toOffset: 0)
@@ -424,19 +615,17 @@ public final class Vault {
         try? FileManager.default.removeItem(at: url)
     }
 
-    /// Temp files of an interrupted write. They hold only encrypted data and are never referenced.
-    private func removeLeftoverTempFiles() {
-        let fm = FileManager.default
-        guard let e = fm.enumerator(at: blobsURL, includingPropertiesForKeys: nil) else { return }
-        for case let url as URL in e where url.pathExtension == "tmp" { try? fm.removeItem(at: url) }
-    }
-
     // MARK: helpers
 
     private func key() throws -> Data {
+        try keyAndEpoch().0
+    }
+
+    private func keyAndEpoch() throws -> (Data, Int) {
         keyLock.lock(); defer { keyLock.unlock() }
         guard let k = masterKey else { throw VaultError.locked }
-        return k.data
+        guard !renewing else { throw VaultError.busy }
+        return (k.data, keyEpoch)
     }
 
     private func setKey(_ key: SecretKey) {

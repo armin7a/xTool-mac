@@ -74,10 +74,12 @@ public enum BlobCipher {
 
     /// Re-encrypts under a new blob id and salt without ever holding more than one chunk in plaintext.
     @discardableResult
-    public static func reencrypt(read: Reader, write: Writer, masterKey: Data, fromBlobId: String, toBlobId: String, progress: Progress? = nil) throws -> Int64 {
+    /// Decrypts and encrypts again, chunk by chunk, with a fresh salt. `newMasterKey` moves the blob to another master key.
+    public static func reencrypt(read: Reader, write: Writer, masterKey: Data, fromBlobId: String, toBlobId: String,
+                                 newMasterKey: Data? = nil, progress: Progress? = nil) throws -> Int64 {
         let (oldKey, chunkSize) = try openHeader(read: read, masterKey: masterKey, blobId: fromBlobId)
         let salt = Aead.randomBytes(saltSize)
-        let newKey = blobKey(masterKey: masterKey, salt: salt, blobId: toBlobId)
+        let newKey = blobKey(masterKey: newMasterKey ?? masterKey, salt: salt, blobId: toBlobId)
         try write(header(salt: salt, chunkSize: chunkSize))
         var index: Int64 = 0
         var total: Int64 = 0

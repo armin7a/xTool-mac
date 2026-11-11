@@ -215,6 +215,27 @@ enum TestTour {
         await waitForTransfer(model)
         print("INFO second export kept apart: \(FileManager.default.fileExists(atPath: outbox.appendingPathComponent("Ordner (2)/Film.mov").path))")
 
+        // a new master key: the window is blocked meanwhile, afterwards everything is still there and identical
+        if let password, let vault = model.vault {
+            let header = try? Data(contentsOf: vault.headerURL)
+            model.renewMasterKey(password: password)
+            await wait(0.6)
+            snap("32-neuer-schluessel")
+            print("INFO renewing blocks the window: \(model.renewingKey)")
+            await waitForTransfer(model)
+            print("INFO new key: \(model.alert?.title ?? "no message")")
+            model.alert = nil
+            let changed = (try? Data(contentsOf: vault.headerURL)) != header
+            let again = outbox.appendingPathComponent("after-new-key")
+            try? FileManager.default.createDirectory(at: again, withIntermediateDirectories: true)
+            model.exportNodes([folder.id], to: again)
+            await waitForTransfer(model)
+            let identical = FileManager.default.contentsEqual(atPath: again.appendingPathComponent("Ordner/Film.mov").path, andPath: big.path)
+            let staging = FileManager.default.fileExists(atPath: vault.root.appendingPathComponent("rekey").path)
+            let stray = Set(vault.allBlobIds()) != Set(vault.referencedBlobIds())
+            print("INFO after new key: key file changed \(changed), unlocked \(model.state == .unlocked), export identical \(identical), staging left \(staging), stray blobs \(stray)")
+        }
+
         // locking in the middle of an upload: stops cleanly, the half-written blob disappears
         let before = model.vault?.allBlobIds().count ?? 0
         let vault = model.vault

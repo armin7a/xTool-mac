@@ -71,6 +71,12 @@ run("WriterDocxTests.oldPatchedFilesCanBeRepaired") { try WriterDocxTests().oldP
 run("KeyProtectionTests.oldVaultIsUpgradedAndStaysReadable") { try KeyProtectionTests().oldVaultIsUpgradedAndStaysReadable() }
 run("KeyProtectionTests.keyStaysUsableForRunningWorkAfterLocking") { try KeyProtectionTests().keyStaysUsableForRunningWorkAfterLocking() }
 run("KeyProtectionTests.olderSettingsGetDefaults") { try KeyProtectionTests().olderSettingsGetDefaults() }
+run("RenewalTests.everythingStaysReadableAndTheOldKeyFileOpensNothing") { try RenewalTests().everythingStaysReadableAndTheOldKeyFileOpensNothing() }
+run("RenewalTests.newPasswordReplacesTheOldOne") { try RenewalTests().newPasswordReplacesTheOldOne() }
+run("RenewalTests.wrongPasswordChangesNothing") { try RenewalTests().wrongPasswordChangesNothing() }
+run("RenewalTests.cancellingLeavesTheVaultAsItWas") { try RenewalTests().cancellingLeavesTheVaultAsItWas() }
+run("RenewalTests.crashBeforeTheSwitchIsDiscarded") { try RenewalTests().crashBeforeTheSwitchIsDiscarded() }
+run("RenewalTests.crashAfterTheSwitchIsCompletedOnNextStart") { try RenewalTests().crashAfterTheSwitchIsCompletedOnNextStart() }
 run("MetadataTests.photosLoseLocationCameraAndNames") { try MetadataTests().photosLoseLocationCameraAndNames() }
 run("MetadataTests.pdfLosesAuthorAndHiddenXMP") { try MetadataTests().pdfLosesAuthorAndHiddenXMP() }
 run("MetadataTests.protectedPdfIsLeftAlone") { try MetadataTests().protectedPdfIsLeftAlone() }

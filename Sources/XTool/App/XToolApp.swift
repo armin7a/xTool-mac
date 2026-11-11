@@ -127,7 +127,24 @@ struct RootView: View {
             switch model.state {
             case .setup: SetupView()
             case .locked: LoginView()
-            case .unlocked: MainView()
+            case .unlocked: MainView().disabled(model.renewingKey)
+            }
+            if model.renewingKey {
+                // nothing may change while everything is encrypted again
+                ZStack {
+                    Color.black.opacity(0.35)
+                    VStack(spacing: 6) {
+                        Image(systemName: "key.horizontal").font(.system(size: 26, weight: .light))
+                        Text("Making a new key").font(.system(size: 15, weight: .semibold))
+                        Text("Every file is encrypted again. Keep xTool open; if it quits or the Mac turns off, nothing is lost.")
+                            .font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(width: 300)
+                    }
+                    .padding(24)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: XRadius.medium, style: .continuous))
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {}
+                .transition(.opacity)
             }
             VStack(spacing: 8) {
                 if let transfer = model.transfer { TransferCard(transfer: transfer) }
