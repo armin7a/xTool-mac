@@ -59,17 +59,17 @@ enum FileTypes {
 
     static func describe(_ node: Node) -> String {
         switch category(node) {
-        case .folder: return "Ordner"
-        case .pdf: return "PDF-Dokument"
-        case .image: return "Bild"
-        case .text: return "Textdatei"
-        case .word: return "Word-Dokument"
-        case .excel: return "Excel-Tabelle"
+        case .folder: return "Folder"
+        case .pdf: return "PDF document"
+        case .image: return "Image"
+        case .text: return "Text file"
+        case .word: return "Word document"
+        case .excel: return "Excel spreadsheet"
         case .powerpoint: return "PowerPoint"
         case .audio: return "Audio"
         case .video: return "Video"
-        case .archive: return "Archiv"
-        case .other: return node.ext.isEmpty ? "Datei" : "\(node.ext.uppercased())-Datei"
+        case .archive: return "Archive"
+        case .other: return node.ext.isEmpty ? "File" : "\(node.ext.uppercased()) file"
         }
     }
 
@@ -83,8 +83,8 @@ enum FileTypes {
     static func date(_ d: Date) -> String {
         let cal = Calendar.current
         let time = d.formatted(date: .omitted, time: .shortened)
-        if cal.isDateInToday(d) { return "Heute, \(time)" }
-        if cal.isDateInYesterday(d) { return "Gestern, \(time)" }
+        if cal.isDateInToday(d) { return "Today, \(time)" }
+        if cal.isDateInYesterday(d) { return "Yesterday, \(time)" }
         return d.formatted(.dateTime.day().month(.abbreviated).year())
     }
 }

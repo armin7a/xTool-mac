@@ -29,8 +29,8 @@ enum WordLists {
         "mond", "stern", "blume", "baum", "wasser", "feuer", "erde", "luft", "red", "blue", "green", "black", "white", "sun", "moon", "star",
     ]
 
-    /// Suggestions are built from these: simple German words without umlauts, easy to type on any keyboard.
-    static let passphraseWords: [String] = [
+    /// German nouns, so that German passphrases are rated like dictionary words. Not used for suggestions.
+    static let germanNouns: [String] = [
         "Abend", "Acker", "Adler", "Ahorn", "Akte", "Alge", "Alpen", "Ampel", "Amsel", "Anker", "Antenne", "Apfel", "Arena", "Armband", "Asche", "Ast",
         "Atlas", "Atem", "Auge", "Ausflug", "Avocado", "Backe", "Bagger", "Bahnhof", "Balkon", "Ballon", "Banane", "Bank", "Bart", "Basilikum", "Batterie", "Bauer",
         "Becher", "Beere", "Berg", "Besen", "Beton", "Biene", "Birne", "Blatt", "Bleistift", "Blitz", "Blume", "Bluse", "Boden", "Bogen", "Bohne", "Boje",
@@ -65,5 +65,49 @@ enum WordLists {
         "Linsen", "Lorbeer", "Marille", "Moschus", "Nashorn", "Neffe", "Nordlicht", "Orkan", "Papagei", "Passat", "Pavian", "Pfau", "Quitte", "Rentier", "Riff", "Sanddorn",
         "Schilf", "Seerose", "Sonnenblume", "Steppe", "Tundra", "Uhu", "Wacholder", "Wasserfall", "Wiesel", "Zander", "Zeppelin", "Ziegel",
         "Wurzel", "Zahnrad", "Zange", "Zebra", "Zeder", "Zelt", "Ziege", "Zimt", "Zirkus", "Zitrone", "Zucker", "Zweig", "Zwiebel", "Zypresse", "Zither", "Zaun",
+    ]
+
+    /// Suggestions are built from these: simple English words, easy to type on any keyboard.
+    static let passphraseWords: [String] = [
+        "Acorn", "Actor", "Adobe", "Agent", "Alarm", "Album", "Alley", "Alpine", "Amber", "Anchor", "Angle", "Ankle", "Antler", "Anvil", "Apron", "Arch",
+        "Arena", "Armor", "Arrow", "Artist", "Ash", "Aspen", "Atlas", "Attic", "Avocado", "Axis", "Badge", "Bagel", "Baker", "Balcony", "Ballad", "Bamboo",
+        "Banana", "Banjo", "Banner", "Barley", "Barn", "Barrel", "Basin", "Basket", "Bat", "Beacon", "Beak", "Bean", "Beard", "Beaver", "Bed", "Bee",
+        "Beech", "Beetle", "Bell", "Belt", "Bench", "Berry", "Bicycle", "Bison", "Blade", "Blanket", "Blossom", "Boat", "Bonnet", "Book", "Boot", "Bottle",
+        "Boulder", "Bowl", "Box", "Bracelet", "Branch", "Brass", "Bread", "Breeze", "Brick", "Bridge", "Brook", "Broom", "Bubble", "Bucket", "Buckle", "Bud",
+        "Buffalo", "Bugle", "Bulb", "Bundle", "Burrow", "Bush", "Butter", "Button", "Cabin", "Cable", "Cactus", "Cake", "Camel", "Camera", "Canal", "Candle",
+        "Canoe", "Canvas", "Canyon", "Cape", "Captain", "Card", "Cargo", "Carpet", "Carrot", "Cart", "Castle", "Cedar", "Cellar", "Cello", "Chain", "Chair",
+        "Chalk", "Channel", "Chapel", "Cherry", "Chess", "Chest", "Chimney", "Chorus", "Cider", "Cinnamon", "Circle", "Cliff", "Clock", "Cloud", "Clover", "Coast",
+        "Cobalt", "Cocoa", "Coconut", "Coin", "Comet", "Compass", "Copper", "Coral", "Cork", "Corn", "Cottage", "Cotton", "Couch", "Cover", "Coyote", "Crab",
+        "Cradle", "Crane", "Crater", "Crayon", "Creek", "Cricket", "Crown", "Crystal", "Cube", "Cup", "Curtain", "Cushion", "Cycle", "Daisy", "Dancer", "Dawn",
+        "Deer", "Delta", "Desert", "Desk", "Dew", "Diamond", "Dinner", "Dolphin", "Donkey", "Door", "Dove", "Drawer", "Dream", "Drum", "Duck", "Dune",
+        "Eagle", "Easel", "Echo", "Eel", "Elbow", "Elephant", "Elk", "Ember", "Emerald", "Engine", "Envelope", "Falcon", "Fan", "Farm", "Feather", "Fence",
+        "Fern", "Ferry", "Fiddle", "Field", "Fig", "Finch", "Fir", "Fjord", "Flag", "Flame", "Flask", "Fleece", "Flint", "Flute", "Foam", "Fog",
+        "Forest", "Fork", "Fossil", "Fountain", "Fox", "Frame", "Frog", "Frost", "Fruit", "Galaxy", "Garden", "Garlic", "Gate", "Gazelle", "Gecko", "Gem",
+        "Geyser", "Giraffe", "Glacier", "Glass", "Globe", "Glove", "Goat", "Gondola", "Goose", "Gourd", "Grain", "Granite", "Grape", "Grass", "Gravel", "Guitar",
+        "Gull", "Hammer", "Hamster", "Harbor", "Harp", "Harvest", "Hawk", "Hazel", "Heart", "Hedge", "Helmet", "Heron", "Hill", "Hive", "Honey", "Hood",
+        "Horizon", "Horn", "Horse", "Hut", "Iceberg", "Igloo", "Indigo", "Ink", "Iris", "Island", "Ivory", "Ivy", "Jacket", "Jaguar", "Jar", "Jasmine",
+        "Jelly", "Jewel", "Juice", "Jungle", "Kayak", "Kernel", "Kettle", "Kite", "Kitten", "Kiwi", "Knot", "Koala", "Ladder", "Ladle", "Lagoon", "Lake",
+        "Lamb", "Lamp", "Lantern", "Lark", "Lava", "Lawn", "Leaf", "Lemon", "Lens", "Lentil", "Lettuce", "Lily", "Lime", "Linen", "Lion", "Lizard",
+        "Llama", "Lobster", "Locket", "Lotus", "Lynx", "Magnet", "Mango", "Mantle", "Maple", "Marble", "Market", "Marsh", "Mask", "Meadow", "Melon", "Mesa",
+        "Meteor", "Midnight", "Mill", "Mint", "Mirror", "Mitten", "Moat", "Model", "Mole", "Monsoon", "Moose", "Moss", "Moth", "Mountain", "Mouse", "Muffin",
+        "Mule", "Museum", "Mushroom", "Needle", "Nest", "Net", "Nickel", "Noodle", "North", "Nut", "Oak", "Oasis", "Oat", "Ocean", "Octopus", "Olive",
+        "Onion", "Opal", "Orange", "Orbit", "Orchard", "Orchid", "Otter", "Owl", "Oyster", "Paddle", "Pagoda", "Palace", "Palm", "Pancake", "Panda", "Paper",
+        "Parade", "Parrot", "Pasta", "Path", "Peach", "Peacock", "Peanut", "Pear", "Pebble", "Pelican", "Pencil", "Penguin", "Piano", "Pickle", "Pigeon", "Pillow",
+        "Pilot", "Pine", "Pipe", "Pirate", "Planet", "Plank", "Plum", "Pocket", "Poem", "Pond", "Pony", "Poppy", "Porch", "Potato", "Pottery", "Prairie",
+        "Prism", "Pumpkin", "Puppet", "Quail", "Quarry", "Quartz", "Quill", "Quilt", "Rabbit", "Raccoon", "Radar", "Radio", "Raft", "Rain", "Raisin", "Rake",
+        "Ranch", "Raven", "Reed", "Reef", "Ribbon", "Rice", "Ridge", "River", "Robin", "Rocket", "Roof", "Rope", "Rose", "Rudder", "Rug", "Saddle",
+        "Saffron", "Sail", "Salmon", "Salt", "Sand", "Satin", "Saucer", "Scarf", "Scooter", "Seal", "Seed", "Shark", "Sheep", "Shell", "Shield", "Ship",
+        "Shore", "Shovel", "Shrub", "Silk", "Silver", "Sketch", "Sled", "Slipper", "Snail", "Snow", "Soap", "Sock", "Sofa", "Sparrow", "Spice", "Spider",
+        "Spinach", "Sponge", "Spoon", "Spruce", "Squash", "Squid", "Stable", "Stair", "Statue", "Steam", "Stone", "Stool", "Storm", "Stove", "Straw", "Stream",
+        "Street", "Sugar", "Summit", "Swamp", "Swan", "Sweater", "Swing", "Table", "Tablet", "Tadpole", "Tea", "Teapot", "Temple", "Tent", "Thistle", "Thunder",
+        "Thyme", "Ticket", "Tiger", "Tile", "Timber", "Toast", "Tomato", "Topaz", "Torch", "Tower", "Tractor", "Trail", "Train", "Tree", "Trout", "Trumpet",
+        "Tulip", "Tunnel", "Turnip", "Turtle", "Tusk", "Twig", "Umbrella", "Valley", "Vase", "Velvet", "Violin", "Volcano", "Wagon", "Walnut", "Walrus", "Wand",
+        "Wave", "Weasel", "Well", "Whale", "Wheat", "Wheel", "Whistle", "Willow", "Window", "Wolf", "Wool", "Yacht", "Yak", "Yarn", "Zebra", "Zinc",
+        "Almond", "Anthem", "Banquet", "Beetroot", "Biscuit", "Blizzard", "Bramble", "Bronze", "Cabbage", "Canary", "Caramel", "Cashew", "Catfish", "Cavern", "Chestnut", "Cobra",
+        "Cockpit", "Compost", "Cougar", "Crocus", "Cupboard", "Dingo", "Dragonfly", "Driftwood", "Dumpling", "Falafel", "Ferret", "Firefly", "Flamingo", "Fudge", "Goblet", "Gopher",
+        "Granola", "Hammock", "Hazelnut", "Hedgehog", "Hornet", "Husky", "Iguana", "Juniper", "Kangaroo", "Kelp", "Lemur", "Lilac", "Limestone", "Macaw", "Mammoth", "Mandolin",
+        "Marigold", "Meerkat", "Minnow", "Mollusk", "Mustard", "Nectar", "Nutmeg", "Oregano", "Ostrich", "Paprika", "Parsley", "Peppermint", "Pinecone", "Platypus", "Pretzel", "Puffin",
+        "Quince", "Radish", "Redwood", "Rhubarb", "Sardine", "Seahorse", "Sequoia", "Sesame", "Shamrock", "Skylark", "Starfish", "Sunflower", "Tangerine", "Thimble", "Toucan", "Truffle",
+        "Tundra", "Vanilla", "Wombat", "Zucchini",
     ]
 }

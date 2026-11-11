@@ -28,7 +28,7 @@ struct PasswordField: View {
             .onSubmit(onSubmit)
 
             if capsLock && focused {
-                Image(systemName: "capslock.fill").font(.system(size: 11)).foregroundStyle(XColor.warning).help("Die Feststelltaste ist aktiv")
+                Image(systemName: "capslock.fill").font(.system(size: 11)).foregroundStyle(XColor.warning).help("Caps Lock is on")
             }
             Button {
                 revealed.toggle()
@@ -37,7 +37,7 @@ struct PasswordField: View {
                 Image(systemName: revealed ? "eye.slash" : "eye").font(.system(size: 12)).foregroundStyle(.secondary).frame(width: 20, height: 20).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(revealed ? "Passwort verbergen" : "Passwort anzeigen")
+            .help(revealed ? "Hide Password" : "Show Password")
         }
         .padding(.horizontal, 10)
         .frame(height: 32)
@@ -68,7 +68,7 @@ struct StrengthMeter: View {
                 }
             }
             HStack(alignment: .firstTextBaseline) {
-                Text(report.hint ?? (report.score > 0 ? " " : "Mindestens \(PasswordPolicy.minimumLength) Zeichen. Mehrere zufällige Wörter sind ideal."))
+                Text(report.hint ?? (report.score > 0 ? " " : "At least \(PasswordPolicy.minimumLength) characters. Several random words are ideal."))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -107,24 +107,24 @@ struct NewPasswordForm: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            PasswordField(title: "Neues Passwort", text: $password, revealed: $revealed)
+            PasswordField(title: "New Password", text: $password, revealed: $revealed)
             StrengthMeter(report: report)
             Button {
                 password = PasswordGenerator.passphrase()
                 confirmation = ""
                 revealed = true
             } label: {
-                Label("Passwort vorschlagen", systemImage: "wand.and.stars")
+                Label("Suggest Password", systemImage: "wand.and.stars")
                     .font(.system(size: 12))
                     .foregroundStyle(XColor.accent)
             }
             .buttonStyle(.plain)
-            .help("Erzeugt sechs zufällige Wörter: leicht zu merken, kaum zu erraten.")
+            .help("Creates six random words: easy to remember, hard to guess.")
 
-            PasswordField(title: "Passwort wiederholen", text: $confirmation, revealed: $revealedConfirmation, onSubmit: onSubmit)
+            PasswordField(title: "Repeat Password", text: $confirmation, revealed: $revealedConfirmation, onSubmit: onSubmit)
                 .padding(.top, 6)
             if mismatch {
-                Text("Die Eingabe stimmt noch nicht überein.").font(.system(size: 11)).foregroundStyle(XColor.danger)
+                Text("The passwords do not match yet.").font(.system(size: 11)).foregroundStyle(XColor.danger)
             }
         }
     }

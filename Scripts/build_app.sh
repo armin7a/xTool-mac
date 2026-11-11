@@ -5,8 +5,8 @@ set -euo pipefail
 SCRIPTS="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPTS/compile.sh"
 
-VERSION="2.0.0"
-BUILD_NUMBER="205"
+VERSION="2.1.0"
+BUILD_NUMBER="210"
 BUNDLE_ID="ch.xtool.app"     # must stay: macOS keeps the vault in the container of this id
 DIST="$ROOT/dist"
 SDK="$(pick_sdk)"
@@ -15,13 +15,13 @@ echo "▸ SDK: $(basename "$SDK")"
 echo "▸ Tests …"
 bash "$SCRIPTS/run_tests.sh" | tail -n 1
 
-echo "▸ Kompiliere (Apple Silicon und Intel) …"
+echo "▸ Compiling (Apple Silicon and Intel) …"
 compile_all arm64 release
 compile_all x86_64 release
 BINDIR="$OUT/universal"
 mkdir -p "$BINDIR"
 lipo -create "$OUT/arm64-release/xTool" "$OUT/x86_64-release/xTool" -output "$BINDIR/xTool"
-echo "  Architekturen: $(lipo -archs "$BINDIR/xTool")"
+echo "  Architectures: $(lipo -archs "$BINDIR/xTool")"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -51,7 +51,8 @@ write_plist() { # $1 = path, $2 = name, $3 = id, $4 = executable, $5 = category
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>$VERSION</string>
     <key>CFBundleVersion</key><string>$BUILD_NUMBER</string>
-    <key>CFBundleDevelopmentRegion</key><string>de</string>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
+    <key>CFBundleLocalizations</key><array><string>en</string></array>
     <key>LSMinimumSystemVersion</key><string>$DEPLOYMENT</string>
     <key>LSApplicationCategoryType</key><string>$5</string>
     <key>NSHighResolutionCapable</key><true/>
@@ -63,7 +64,7 @@ PLIST
 
 # Assembled and signed outside Google Drive: its extended attributes would break the signature.
 APP="$OUT/stage/xTool.app"
-echo "▸ Erstelle xTool.app …"
+echo "▸ Assembling xTool.app …"
 rm -rf "$OUT/stage"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BINDIR/xTool" "$APP/Contents/MacOS/xTool"
@@ -72,12 +73,12 @@ make_icns "$APP/Contents/Resources/AppIcon.icns" "$ROOT/Resources/Logo.png"
 write_plist "$APP/Contents/Info.plist" "xTool" "$BUNDLE_ID" "xTool" "public.app-category.productivity"
 xattr -cr "$APP"
 
-echo "▸ Signiere (ad-hoc, App-Sandbox) …"
+echo "▸ Signing (ad hoc, App Sandbox) …"
 cat "$SCRIPTS/xTool.entitlements" > "$TMP/app.entitlements"
 codesign --force --options runtime --timestamp=none --entitlements "$TMP/app.entitlements" --sign - "$APP"
 codesign --verify --strict --deep "$APP"
 
-echo "▸ Erstelle DMG …"
+echo "▸ Creating DMG …"
 STAGE="$TMP/dmg"
 mkdir -p "$STAGE" "$DIST"
 cp -R "$APP" "$STAGE/"
@@ -85,4 +86,4 @@ ln -s /Applications "$STAGE/Applications"
 hdiutil create -volname "xTool" -srcfolder "$STAGE" -ov -format UDZO "$TMP/xTool.dmg" >/dev/null
 cat "$TMP/xTool.dmg" > "$DIST/xTool-$VERSION.dmg"
 
-echo "✓ Fertig: $DIST/xTool-$VERSION.dmg ($(du -h "$DIST/xTool-$VERSION.dmg" | cut -f1))"
+echo "✓ Done: $DIST/xTool-$VERSION.dmg ($(du -h "$DIST/xTool-$VERSION.dmg" | cut -f1))"

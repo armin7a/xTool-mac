@@ -18,10 +18,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MainActor.assumeIsolated {
             guard let transfer = model?.transfer else { return .terminateNow }
             let alert = NSAlert()
-            alert.messageText = "\(transfer.title). Trotzdem beenden?"
-            alert.informativeText = "Bereits fertige Dateien bleiben erhalten."
-            alert.addButton(withTitle: "Weiterlaufen lassen")
-            alert.addButton(withTitle: "Beenden")
+            alert.messageText = "\(transfer.title). Quit anyway?"
+            alert.informativeText = "Files that are already finished are kept."
+            alert.addButton(withTitle: "Keep Running")
+            alert.addButton(withTitle: "Quit")
             return alert.runModal() == .alertFirstButtonReturn ? .terminateCancel : .terminateNow
         }
     }
@@ -66,15 +66,15 @@ struct XToolApp: App {
         .windowToolbarStyle(.unifiedCompact(showsTitle: false))
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("Dateien hinzufügen …") { addFiles() }
+                Button("Add Files …") { addFiles() }
                     .keyboardShortcut("o")
                     .disabled(!model.isUnlocked)
-                Button("Auswahl exportieren …") { model.exportWithPanel(Array(model.selection)) }
+                Button("Export Selection …") { model.exportWithPanel(Array(model.selection)) }
                     .keyboardShortcut("e", modifiers: [.command, .shift])
                     .disabled(!model.isUnlocked || model.selection.isEmpty)
             }
             CommandGroup(after: .sidebar) {
-                Button(model.focusMode ? "Fokusmodus beenden" : "Fokusmodus") { model.focusMode.toggle() }
+                Button(model.focusMode ? "Exit Focus Mode" : "Focus Mode") { model.focusMode.toggle() }
                     .keyboardShortcut("f", modifiers: [.command, .control])
                 Divider()
                 ForEach(Array([AppSection.drive, .recent, .notes, .todo, .trash].enumerated()), id: \.element) { i, section in
@@ -86,18 +86,18 @@ struct XToolApp: App {
                     .keyboardShortcut(",")
                     .disabled(!model.isUnlocked)
             }
-            CommandMenu("Tresor") {
-                Button("Sperren") { model.lock() }
+            CommandMenu("Vault") {
+                Button("Lock") { model.lock() }
                     .keyboardShortcut("l", modifiers: [.command, .control])
                     .disabled(!model.isUnlocked)
             }
             CommandMenu("Tabs") {
-                Button("Tab schließen") { if let id = model.activeTabId { model.closeTab(id) } }
+                Button("Close Tab") { if let id = model.activeTabId { model.closeTab(id) } }
                     .keyboardShortcut("w")
                     .disabled(model.activeTabId == nil)
-                Button("Nächster Tab") { cycle(1) }
+                Button("Next Tab") { cycle(1) }
                     .keyboardShortcut("]", modifiers: [.command, .shift])
-                Button("Vorheriger Tab") { cycle(-1) }
+                Button("Previous Tab") { cycle(-1) }
                     .keyboardShortcut("[", modifiers: [.command, .shift])
             }
             TextFormattingCommands()
@@ -174,7 +174,7 @@ private struct TransferCard: View {
                 Spacer()
                 Text("\(Int(transfer.fraction * 100)) %").font(.system(size: 11)).monospacedDigit().foregroundStyle(.secondary)
                 if transfer.cancellable {
-                    IconButton(symbol: "xmark", help: "Abbrechen") { model.cancelToken?.cancel() }
+                    IconButton(symbol: "xmark", help: "Cancel") { model.cancelToken?.cancel() }
                         .frame(height: 16)
                 }
             }
@@ -210,7 +210,7 @@ struct ViewerHost<Content: View>: View {
             if let loaded, model.isUnlocked {
                 content(loaded.0, loaded.1)
             } else if failed {
-                EmptyState(symbol: "lock.doc", title: "Datei nicht verfügbar", message: "Der Tresor ist gesperrt oder die Datei wurde gelöscht.")
+                EmptyState(symbol: "lock.doc", title: "File not available", message: "The vault is locked or the file was deleted.")
             } else {
                 ProgressView().controlSize(.small)
             }

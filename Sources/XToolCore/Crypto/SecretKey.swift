@@ -12,7 +12,7 @@ final class SecretKey: @unchecked Sendable {
         posix_memalign(&pointer, Int(getpagesize()), max(count, 1))
         bytes = pointer!
         mlock(bytes, count) // best effort: without it the key is still wiped, just not guaranteed out of swap
-        source.withUnsafeBytes { memcpy(bytes, $0.baseAddress!, count) }
+        _ = source.withUnsafeBytes { memcpy(bytes, $0.baseAddress!, count) }
     }
 
     deinit {

@@ -2,10 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- App-Sandbox OHNE Netzwerkrecht: macOS blockiert jeden Netzwerkzugriff von xTool. -->
+    <!-- App Sandbox WITHOUT the network entitlement: macOS blocks every network access by xTool. -->
     <key>com.apple.security.app-sandbox</key>
     <true/>
-    <!-- Nur Dateien, die du selbst auswählst oder hineinziehst (Import, Sicherung). -->
+    <!-- Only files you pick or drag in yourself (import, backup). -->
     <key>com.apple.security.files.user-selected.read-write</key>
     <true/>
 </dict>

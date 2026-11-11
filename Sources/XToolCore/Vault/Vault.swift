@@ -10,14 +10,14 @@ public enum VaultError: Error, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .alreadyExists: return "Es existiert bereits ein Tresor."
-        case .locked: return "Der Tresor ist gesperrt."
-        case .indexCorrupted: return "Der Index des Tresors ist beschädigt und konnte nicht gelesen werden."
-        case .invalidBackup: return "Das ist keine gültige xTool-Sicherung."
-        case .newerFormat: return "Dieser Tresor stammt aus einer neueren xTool-Version."
+        case .alreadyExists: return "A vault already exists."
+        case .locked: return "The vault is locked."
+        case .indexCorrupted: return "The vault index is damaged and could not be read."
+        case .invalidBackup: return "This is not a valid xTool backup."
+        case .newerFormat: return "This vault was made by a newer version of xTool."
         case .notEnoughSpace(let needed, let available):
             let f = ByteCountFormatter.string(fromByteCount:countStyle:)
-            return "Nicht genug freier Speicher: \(f(needed, .file)) nötig, \(f(available, .file)) frei."
+            return "Not enough free space: \(f(needed, .file)) needed, \(f(available, .file)) available."
         }
     }
 }
@@ -80,7 +80,7 @@ public final class Vault {
         let vault = Vault(root: root, header: header)
         vault.masterKey = SecretKey(copying: newKey)
         try vault.writeDurably(try XJSON.encoder().encode(header), to: vault.headerURL)
-        vault.index.boards.append(.makeDefault("Meine Aufgaben"))
+        vault.index.boards.append(.makeDefault("My tasks"))
         try vault.saveIndex()
         return vault
     }

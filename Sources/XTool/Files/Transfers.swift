@@ -45,7 +45,7 @@ private final class ProgressPump: @unchecked Sendable {
 extension AppModel {
     private func runJob(title: String, cancellable: Bool = true, _ work: @escaping @MainActor (CancelToken) async -> Void) {
         guard transfer == nil else {
-            showToast("Bitte warte, bis die laufende Übertragung fertig ist.")
+            showToast("Please wait until the running transfer has finished.")
             return
         }
         let token = CancelToken()
@@ -84,7 +84,7 @@ extension AppModel {
     func importFiles(_ urls: [URL], into folderId: String?) {
         guard let vault, !urls.isEmpty else { return }
         let scoped = urls.filter { $0.startAccessingSecurityScopedResource() }
-        runJob(title: "Dateien werden verschlüsselt") { [self] token in
+        runJob(title: "Encrypting files") { [self] token in
             defer { scoped.forEach { $0.stopAccessingSecurityScopedResource() } }
             var plan: [ImportItem] = []
             for url in urls { Self.collect(url, parent: nil, into: &plan) }
@@ -93,7 +93,7 @@ extension AppModel {
             do {
                 try DiskSpace.ensure(total, at: vault.root)
             } catch {
-                report(error, title: "Nicht genug Speicher")
+                report(error, title: "Not enough space")
                 return
             }
 
@@ -111,7 +111,7 @@ extension AppModel {
                 fileIndex += 1
                 let base = done
                 let name = item.url.lastPathComponent
-                setProgress(detail: files.count > 1 ? "\(fileIndex) von \(files.count): \(name)" : name, done: base, total: total)
+                setProgress(detail: files.count > 1 ? "\(fileIndex) of \(files.count): \(name)" : name, done: base, total: total)
                 let pump = ProgressPump { [weak self] bytes in self?.setProgress(done: base + bytes, total: total) }
                 let url = item.url
                 let result: Result<(id: String, size: Int64, thumb: String?, modified: Date), Error> = await Task.detached(priority: .userInitiated) {
@@ -153,11 +153,11 @@ extension AppModel {
             guard self.vault === vault else { return }
             save()
             if failed > 0 {
-                showToast("\(failed) Datei(en) konnten nicht gelesen werden.", isError: true)
+                showToast(failed == 1 ? "1 file could not be read." : "\(failed) files could not be read.", isError: true)
             } else if token.isCancelled {
-                showToast("Abgebrochen. \(imported) Datei(en) wurden hinzugefügt.")
+                showToast("Cancelled. Files added: \(imported).")
             } else if imported > 0 {
-                showToast(imported == 1 ? "Datei hinzugefügt" : "\(imported) Dateien hinzugefügt")
+                showToast(imported == 1 ? "File added" : "Added \(imported) files")
             }
         }
     }
@@ -201,17 +201,20 @@ extension AppModel {
         let total = files.reduce(Int64(0)) { $0 + $1.node.size }
         guard !plan.isEmpty else { return }
         let scoped = destination.startAccessingSecurityScopedResource()
-        runJob(title: "Dateien werden exportiert") { [self] token in
+        let strip = vault.index.settings.stripMetadata
+        runJob(title: "Exporting files") { [self] token in
             defer { if scoped { destination.stopAccessingSecurityScopedResource() } }
             do {
                 try DiskSpace.ensure(total, at: destination)
             } catch {
-                report(error, title: "Nicht genug Speicher")
+                report(error, title: "Not enough space")
                 return
             }
             let fm = FileManager.default
             var folders: [String: URL] = [:]
             var exported = 0, failed = 0, fileIndex = 0
+            var cleaned = 0, untouched = 0
+            var notCleaned: [String] = []
             var done: Int64 = 0
 
             /// The folder for a path, created on first use. A folder already there gets a number instead of being merged.
@@ -233,14 +236,14 @@ extension AppModel {
                 }
                 fileIndex += 1
                 let base = done
-                let name = item.path.last ?? "Datei"
-                setProgress(detail: files.count > 1 ? "\(fileIndex) von \(files.count): \(name)" : name, done: base, total: total)
+                let name = item.path.last ?? "File"
+                setProgress(detail: files.count > 1 ? "\(fileIndex) of \(files.count): \(name)" : name, done: base, total: total)
                 let pump = ProgressPump { [weak self] bytes in self?.setProgress(done: base + bytes, total: total) }
                 let node = item.node
                 do {
                     let parent = try folderURL(item.path.dropLast())
                     let target = Self.unusedURL(in: parent, name: name)
-                    try await Task.detached(priority: .userInitiated) {
+                    let outcome = try await Task.detached(priority: .userInitiated) { () -> MetadataOutcome in
                         if let blob = node.blobId {
                             try vault.exportBlob(blob, to: target) { bytes in
                                 try token.check()
@@ -249,9 +252,24 @@ extension AppModel {
                         } else {
                             guard FileManager.default.createFile(atPath: target.path, contents: Data()) else { throw CocoaError(.fileWriteNoPermission) }
                         }
+                        var outcome = MetadataOutcome.kept
+                        if strip, node.blobId != nil, node.size > 0 {
+                            do {
+                                outcome = try MetadataScrubber.scrub(target) == .cleaned ? .cleaned : .unsupported
+                            } catch {
+                                outcome = .failed
+                            }
+                        }
                         try? FileManager.default.setAttributes([.modificationDate: node.modified], ofItemAtPath: target.path)
+                        return outcome
                     }.value
                     exported += 1
+                    switch outcome {
+                    case .cleaned: cleaned += 1
+                    case .unsupported: untouched += 1
+                    case .failed: notCleaned.append(name)
+                    case .kept: break
+                    }
                 } catch is CancellationError {
                     break
                 } catch {
@@ -260,16 +278,25 @@ extension AppModel {
                 }
                 done += node.size
             }
-            if failed > 0 {
-                alert = AlertInfo(title: "Export unvollständig",
-                                  message: "\(failed) Datei(en) konnten nicht exportiert werden. Sie bleiben im Tresor. \(exported) Datei(en) wurden gespeichert.")
+            if !notCleaned.isEmpty {
+                let list = notCleaned.prefix(5).joined(separator: ", ") + (notCleaned.count > 5 ? ", …" : "")
+                alert = AlertInfo(title: "Metadata not removed",
+                                  message: "xTool could not clean these files, so they were exported unchanged and may still contain names, places or device data: \(list). This happens with password-protected PDFs, for example. Check them before you share them.")
+            } else if failed > 0 {
+                alert = AlertInfo(title: "Export incomplete",
+                                  message: "Files not exported: \(failed). They stay in the vault. Files saved: \(exported).")
             } else if token.isCancelled {
-                showToast("Abgebrochen. \(exported) Datei(en) wurden exportiert.")
+                showToast("Cancelled. Files exported: \(exported).")
             } else {
-                showToast(exported == 1 ? "Datei exportiert" : "\(exported) Dateien exportiert")
+                var text = exported == 1 ? "File exported" : "Exported \(exported) files"
+                if cleaned > 0 { text += cleaned == exported ? " without metadata" : " · metadata removed from \(cleaned)" }
+                if cleaned > 0 && untouched > 0 { text += ", other file types unchanged" }
+                showToast(text)
             }
         }
     }
+
+    private enum MetadataOutcome { case kept, cleaned, unsupported, failed }
 
     private static func collect(_ node: Node, path: [String], drive: Drive, into plan: inout [ExportItem]) {
         let name = safeFileName(node.name)
@@ -281,7 +308,7 @@ extension AppModel {
     /// A name from the index must stay one path component.
     private static func safeFileName(_ name: String) -> String {
         let clean = name.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: ":", with: "_")
-        return clean == "." || clean == ".." || clean.isEmpty ? "Unbenannt" : clean
+        return clean == "." || clean == ".." || clean.isEmpty ? "Untitled" : clean
     }
 
     private static func unusedURL(in folder: URL, name: String) -> URL {
@@ -311,11 +338,11 @@ extension AppModel {
         ids.compactMap { drive.get($0) }.forEach(walk)
         let total = nodes.reduce(Int64(0)) { $0 + ($1.isFolder ? 0 : $1.size) }
 
-        runJob(title: "Dateien werden kopiert") { [self] token in
+        runJob(title: "Copying files") { [self] token in
             do {
                 try DiskSpace.ensure(total, at: vault.root)
             } catch {
-                report(error, title: "Nicht genug Speicher")
+                report(error, title: "Not enough space")
                 return
             }
             var done: Int64 = 0
@@ -366,7 +393,7 @@ extension AppModel {
             for node in ids.compactMap({ self.drive?.get($0) }) { await copy(node, into: target) }
             guard self.vault === vault else { return }
             save()
-            if failed > 0 { showToast("\(failed) Datei(en) konnten nicht kopiert werden.", isError: true) }
+            if failed > 0 { showToast(failed == 1 ? "1 file could not be copied." : "\(failed) files could not be copied.", isError: true) }
         }
     }
 
@@ -375,7 +402,7 @@ extension AppModel {
     func createBackup(to url: URL) {
         guard let vault else { return }
         flush()
-        runJob(title: "Sicherung wird erstellt", cancellable: false) { [self] _ in
+        runJob(title: "Creating backup", cancellable: false) { [self] _ in
             let total = Self.vaultSize(vault)
             do {
                 try DiskSpace.ensure(total, at: url.deletingLastPathComponent())
@@ -384,9 +411,9 @@ extension AppModel {
                     vault.waitForWrites()
                     try Backup.create(vault: vault, to: url) { pump.report(Int64($0 * 1000)) }
                 }.value
-                showToast("Sicherung erstellt")
+                showToast("Backup created")
             } catch {
-                report(error, title: "Sicherung fehlgeschlagen")
+                report(error, title: "Backup failed")
             }
         }
     }
@@ -401,12 +428,12 @@ extension AppModel {
     /// Checks the password first, then replaces the vault. The old vault stays next to it.
     func restoreBackup(from url: URL, password: String) {
         let scoped = url.startAccessingSecurityScopedResource()
-        runJob(title: "Sicherung wird eingespielt", cancellable: false) { [self] _ in
+        runJob(title: "Restoring backup", cancellable: false) { [self] _ in
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             do {
                 let ok = try await Task.detached(priority: .userInitiated) { try Backup.checkPassword(backup: url, password: password) }.value
                 guard ok else {
-                    alert = AlertInfo(title: "Falsches Passwort", message: "Mit diesem Passwort lässt sich die Sicherung nicht öffnen. Dein Tresor bleibt unverändert.")
+                    alert = AlertInfo(title: "Wrong password", message: "This password does not open the backup. Your vault is unchanged.")
                     return
                 }
                 lock()
@@ -417,12 +444,12 @@ extension AppModel {
                     try Backup.restore(backup: url, to: root, password: password) { pump.report(Int64($0 * 1000)) }
                 }.value
                 state = .locked
-                var message = "Melde dich mit dem Passwort der Sicherung an."
-                if result.missingFiles > 0 { message += " In der Sicherung fehlt der Inhalt von \(result.missingFiles) Datei(en)." }
-                if result.previousVault != nil { message += " Der bisherige Tresor wurde aufbewahrt." }
-                alert = AlertInfo(title: "Sicherung eingespielt", message: message)
+                var message = "Sign in with the password of the backup."
+                if result.missingFiles > 0 { message += " The backup is missing the content of \(result.missingFiles) file(s)." }
+                if result.previousVault != nil { message += " The previous vault was kept." }
+                alert = AlertInfo(title: "Backup restored", message: message)
             } catch {
-                report(error, title: "Wiederherstellung fehlgeschlagen")
+                report(error, title: "Restore failed")
             }
         }
     }

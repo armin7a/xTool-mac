@@ -11,23 +11,23 @@ public struct PasswordReport: Equatable {
 
     /// Estimated strength in bits: how hard guessing is, assuming the attacker knows common words and patterns.
     public let bits: Double
-    /// 0 = empty, 1 = "Zu schwach", 2 = "Schwach", 3 = "Gut", 4 = "Sehr stark"
+    /// 0 = empty, 1 = "Too weak", 2 = "Weak", 3 = "Good", 4 = "Very strong"
     public let score: Int
     public let problems: [Problem]
 
     public var isAcceptable: Bool { problems.isEmpty && score >= 3 }
 
     public var label: String {
-        ["", "Zu schwach", "Schwach", "Gut", "Sehr stark"][score]
+        ["", "Too weak", "Weak", "Good", "Very strong"][score]
     }
 
     /// The one thing to do next. Nil if the password is fine.
     public var hint: String? {
         switch problems.first {
-        case .sameAsPrevious: return "Das neue Passwort muss sich vom bisherigen unterscheiden."
-        case .common: return "Das ist ein sehr häufiges Passwort und schnell erraten."
-        case .tooShort(let missing): return "Noch \(missing) Zeichen. Mindestens \(PasswordPolicy.minimumLength) sind nötig."
-        case .predictable: return "Zu vorhersehbar. Mehrere zufällige Wörter sind am besten – oder nimm den Vorschlag."
+        case .sameAsPrevious: return "The new password must differ from the current one."
+        case .common: return "This is a very common password and quickly guessed."
+        case .tooShort(let missing): return "\(missing) more characters. At least \(PasswordPolicy.minimumLength) are needed."
+        case .predictable: return "Too predictable. Several random words work best, or use the suggestion."
         case nil: return nil
         }
     }
@@ -35,7 +35,7 @@ public struct PasswordReport: Equatable {
 
 /// Rules for new master passwords. Existing passwords keep working: this is only applied when one is chosen.
 ///
-/// Counting character classes rewards "Sommer2024!", which falls in seconds. This estimates instead what an
+/// Counting character classes rewards "Summer2024!", which falls in seconds. This estimates instead what an
 /// attacker has to try: the cheapest way to build the password from dictionary words, keyboard rows, sequences,
 /// repeats, dates and single characters (the idea behind zxcvbn).
 public enum PasswordPolicy {
@@ -140,7 +140,7 @@ public enum PasswordPolicy {
 
     // MARK: common passwords
 
-    /// True for a listed password or word, also with trailing digits/symbols or letter substitutions ("P@ssw0rt123!").
+    /// True for a listed password or word, also with trailing digits/symbols or letter substitutions ("P@ssw0rd123!").
     static func isCommon(_ password: String) -> Bool {
         let form = normalizedForm(password)
         let unleet = String(form.map { leetMap[$0] ?? $0 })
@@ -171,6 +171,7 @@ public enum PasswordPolicy {
         Set(WordLists.commonPasswords.filter { $0.allSatisfy(\.isLetter) })
             .union(WordLists.commonWords)
             .union(WordLists.passphraseWords.map { $0.lowercased() })
+            .union(WordLists.germanNouns.map { $0.lowercased() })
     }()
 
     private static let wordCost: Double = log2(Double(commonWords.count))

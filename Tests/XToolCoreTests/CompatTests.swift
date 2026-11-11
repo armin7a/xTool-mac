@@ -342,7 +342,7 @@ struct KeyProtectionTests {
         expect(try vault.unlock(password: "Passwort-Test"))
         let start = Date()
         expect(vault.upgradeKeyProtectionIfNeeded(password: "Passwort-Test"))
-        print("    Passwort absichern mit \(KdfParams.default.memoryKiB / 1024) MB: \(Int(Date().timeIntervalSince(start) * 1000)) ms")
+        print("    Key protection with \(KdfParams.default.memoryKiB / 1024) MB: \(Int(Date().timeIntervalSince(start) * 1000)) ms")
         expect(vault.header.params == .default)
         expect(!vault.upgradeKeyProtectionIfNeeded(password: "Passwort-Test"), "nur einmal")
         vault.lock()

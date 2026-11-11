@@ -61,7 +61,7 @@ public final class Drive {
     public static func cleanName(_ name: String) -> String {
         let invalid = CharacterSet(charactersIn: "/\\:*?\"<>|").union(.controlCharacters)
         let cleaned = String(name.trimmingCharacters(in: .whitespacesAndNewlines).unicodeScalars.map { invalid.contains($0) ? "_" : Character($0) })
-        return cleaned.isEmpty ? "Unbenannt" : cleaned
+        return cleaned.isEmpty ? "Untitled" : cleaned
     }
 
     public func uniqueName(in parentId: String?, _ name: String, except: String? = nil) -> String {

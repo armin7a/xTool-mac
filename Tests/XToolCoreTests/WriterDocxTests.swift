@@ -89,7 +89,7 @@ struct WriterDocxTests {
         // a new document whose first save never reached the index
         let lostNew = try vault.writeBlob(try makeDocx("ganz neues Dokument"))
         expect(drive.recoverLostContent() == 1)
-        let folder = drive.children(of: nil).first { $0.isFolder && $0.name == "Wiederhergestellt" }
+        let folder = drive.children(of: nil).first { $0.isFolder && $0.name == "Recovered" }
         expect(folder != nil)
         expect(drive.children(of: folder!.id).first?.blobId == lostNew)
         expect(drive.recoverLostContent() == 0)

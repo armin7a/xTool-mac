@@ -74,7 +74,7 @@ final class WriterController {
 
     enum WriterError: LocalizedError {
         case editorClosed
-        var errorDescription: String? { "Der Editor ist nicht mehr geöffnet." }
+        var errorDescription: String? { "The editor is no longer open." }
     }
 
     func docxData() throws -> Data {
@@ -111,10 +111,10 @@ final class WriterController {
             model.save()
             dirty = false
             model.updateTab(tabId, title: name, nodeId: nodeId, dirty: false)
-            if !silent { model.showToast("Dokument gespeichert") }
+            if !silent { model.showToast("Document saved") }
             return true
         } catch {
-            model.showToast("Speichern fehlgeschlagen: \(error.localizedDescription)")
+            model.showToast("Saving failed: \(error.localizedDescription)")
             return false
         }
     }
@@ -143,7 +143,7 @@ final class WriterController {
     func updateStats() {
         let s = textView?.string ?? ""
         let words = s.split(whereSeparator: { $0.isWhitespace || $0.isNewline }).count
-        stats = "\(words) Wörter · \(s.filter { !$0.isNewline }.count) Zeichen · verschlüsselt in xTool"
+        stats = "\(words) words · \(s.filter { !$0.isNewline }.count) characters · encrypted in xTool"
         updateHeadings()
         updatePageInfo()
     }
@@ -151,7 +151,7 @@ final class WriterController {
     /// "Seite 2 von 5" for the status bar.
     func updatePageInfo() {
         guard let tv = textView else { return }
-        pageInfo = "Seite \(tv.currentPage) von \(tv.pageCount)"
+        pageInfo = "Page \(tv.currentPage) of \(tv.pageCount)"
     }
 
     private func updateHeadings() {
@@ -178,7 +178,7 @@ final class WriterController {
     func insertTableOfContents() {
         updateHeadings()
         guard !headings.isEmpty, let tv = textView else { return }
-        let result = NSMutableAttributedString(string: "Inhaltsverzeichnis" + "\n", attributes: [.font: DocStyle.h2.font, .foregroundColor: DocStyle.h2.color])
+        let result = NSMutableAttributedString(string: "Contents" + "\n", attributes: [.font: DocStyle.h2.font, .foregroundColor: DocStyle.h2.color])
         for h in headings {
             let p = NSMutableParagraphStyle()
             p.headIndent = CGFloat(h.level - 1) * 18
@@ -546,12 +546,12 @@ struct DocStyle: Identifiable, Hashable {
         return f
     }
 
-    static let normal = DocStyle(name: "Standard", size: 11, bold: false, italic: false, colorHex: nil, spaceBefore: 0, spaceAfter: 6)
-    static let title = DocStyle(name: "Titel", size: 26, bold: true, italic: false, colorHex: 0x1E293B, spaceBefore: 0, spaceAfter: 12)
-    static let h1 = DocStyle(name: "Überschrift 1", size: 20, bold: true, italic: false, colorHex: 0x1E293B, spaceBefore: 12, spaceAfter: 6)
-    static let h2 = DocStyle(name: "Überschrift 2", size: 16, bold: true, italic: false, colorHex: 0x1E293B, spaceBefore: 10, spaceAfter: 4)
-    static let h3 = DocStyle(name: "Überschrift 3", size: 13, bold: true, italic: false, colorHex: 0x1E293B, spaceBefore: 8, spaceAfter: 4)
-    static let quote = DocStyle(name: "Zitat", size: 11, bold: false, italic: true, colorHex: 0x555B66, spaceBefore: 6, spaceAfter: 6)
-    static let small = DocStyle(name: "Klein", size: 9, bold: false, italic: false, colorHex: 0x6B7280, spaceBefore: 0, spaceAfter: 4)
+    static let normal = DocStyle(name: "Normal", size: 11, bold: false, italic: false, colorHex: nil, spaceBefore: 0, spaceAfter: 6)
+    static let title = DocStyle(name: "Title", size: 26, bold: true, italic: false, colorHex: 0x1E293B, spaceBefore: 0, spaceAfter: 12)
+    static let h1 = DocStyle(name: "Heading 1", size: 20, bold: true, italic: false, colorHex: 0x1E293B, spaceBefore: 12, spaceAfter: 6)
+    static let h2 = DocStyle(name: "Heading 2", size: 16, bold: true, italic: false, colorHex: 0x1E293B, spaceBefore: 10, spaceAfter: 4)
+    static let h3 = DocStyle(name: "Heading 3", size: 13, bold: true, italic: false, colorHex: 0x1E293B, spaceBefore: 8, spaceAfter: 4)
+    static let quote = DocStyle(name: "Quote", size: 11, bold: false, italic: true, colorHex: 0x555B66, spaceBefore: 6, spaceAfter: 6)
+    static let small = DocStyle(name: "Small", size: 9, bold: false, italic: false, colorHex: 0x6B7280, spaceBefore: 0, spaceAfter: 4)
     static let all = [normal, title, h1, h2, h3, quote, small]
 }

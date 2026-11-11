@@ -164,7 +164,7 @@ final class PageTextView: PrivateTextView {
             (page.footer as NSString).draw(at: NSPoint(x: left, y: footerY), withAttributes: attrs)
         }
         if page.pageNumbers {
-            let text = "Seite \(index + 1) von \(pageCount)" as NSString
+            let text = "Page \(index + 1) of \(pageCount)" as NSString
             text.draw(at: NSPoint(x: right - text.size(withAttributes: attrs).width, y: footerY), withAttributes: attrs)
         }
     }

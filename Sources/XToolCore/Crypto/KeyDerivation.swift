@@ -21,8 +21,8 @@ public enum KeyDerivation {
     private static let sodium = Sodium()
 
     public static func deriveKey(password: String, salt: Data, params: KdfParams) throws -> Data {
-        guard params.parallelism == 1 else { throw XToolCryptoError.unsupportedKdf("Argon2 mit \(params.parallelism) Lanes") }
-        guard salt.count == KdfParams.saltSize else { throw XToolCryptoError.unsupportedKdf("Salt-Länge \(salt.count)") }
+        guard params.parallelism == 1 else { throw XToolCryptoError.unsupportedKdf("Argon2 with \(params.parallelism) lanes") }
+        guard salt.count == KdfParams.saltSize else { throw XToolCryptoError.unsupportedKdf("salt length \(salt.count)") }
         // Unicode NFC, UTF-8: "ä" typed in any way gives the same key.
         var pw = Array(password.precomposedStringWithCanonicalMapping.utf8)
         defer { sodium.utils.zero(&pw) }

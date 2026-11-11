@@ -3,7 +3,7 @@ import Foundation
 extension Drive {
     /// Repairs what a failed index write left behind (xTool for Mac 1.1/1.2 deleted the previous content before the
     /// index was on disk): a document whose content is missing gets the newest matching unreferenced content back,
-    /// other lost documents are put into the folder "Wiederhergestellt". Returns how many were recovered.
+    /// other lost documents are put into the folder "Recovered". Returns how many were recovered.
     /// Reads only the start of each unreferenced blob, so large leftovers don't slow down unlocking.
     @discardableResult
     public func recoverLostContent() -> Int {
@@ -47,9 +47,9 @@ extension Drive {
         // 2. everything else (e.g. a new document whose first save was lost) goes into a folder
         let rest = found.filter { !used.contains($0.id) }
         if !rest.isEmpty {
-            let folder = children(of: nil).first { $0.isFolder && $0.name == "Wiederhergestellt" } ?? createFolder(in: nil, name: "Wiederhergestellt")
+            let folder = children(of: nil).first { $0.isFolder && $0.name == "Recovered" } ?? createFolder(in: nil, name: "Recovered")
             for (k, item) in rest.enumerated() {
-                addFile(in: folder.id, name: "Wiederhergestellt \(k + 1).\(item.kind)", blobId: item.id, size: item.size, modified: item.date)
+                addFile(in: folder.id, name: "Recovered \(k + 1).\(item.kind)", blobId: item.id, size: item.size, modified: item.date)
                 recovered += 1
             }
         }

@@ -11,19 +11,21 @@ OUT="$HOME/Library/Caches/xTool-build"
 DEPLOYMENT="14.0"
 SODIUM_LIB="$ROOT/Vendor/swift-sodium/Clibsodium.xcframework/macos-arm64_x86_64"
 
-# Newest SDK this compiler can read: an SDK newer than the compiler fails with "module compiled with newer Swift".
+# Newest SDK this compiler can fully use: an SDK newer than the compiler fails with "module compiled with newer Swift"
+# or lacks the SwiftUI and Observation macro plugins, so the probe uses both.
 pick_sdk() {
     local sdks="$(xcrun --show-sdk-platform-path 2>/dev/null)/Developer/SDKs"
     [ -d "$sdks" ] || sdks="/Library/Developer/CommandLineTools/SDKs"
     local probe; probe="$(mktemp -d)"
-    echo 'import SwiftUI' > "$probe/p.swift"
+    printf '%s\n' 'import SwiftUI' 'import Observation' '@Observable final class M { var n = 0 }' \
+        'struct V: View { @State var x = 0; var body: some View { Text("\\(x)") } }' > "$probe/p.swift"
     for sdk in $(ls -d "$sdks"/MacOSX[0-9]*.sdk | sort -t X -k 2 -n -r); do
         if swiftc -typecheck -sdk "$sdk" -target arm64-apple-macos$DEPLOYMENT "$probe/p.swift" >/dev/null 2>&1; then
             rm -rf "$probe"; echo "$sdk"; return 0
         fi
     done
     rm -rf "$probe"
-    echo "Kein passendes macOS-SDK gefunden." >&2
+    echo "No usable macOS SDK found." >&2
     return 1
 }
 
@@ -51,7 +53,7 @@ compile_all() {
     [ -n "${SDK:-}" ] || SDK="$(pick_sdk)"
     if [ "$config" = release ]; then MODE=(-O); else MODE=(-Onone -g -DDEBUG -enable-testing); fi
 
-    echo "  $ARCH: Abhängigkeiten …"
+    echo "  $ARCH: dependencies …"
     compile_module ZIPFoundation lib "$ROOT/Vendor/ZIPFoundation/Sources/ZIPFoundation" -suppress-warnings
     compile_module Sodium lib "$ROOT/Vendor/swift-sodium/Sodium" -suppress-warnings
     echo "  $ARCH: XToolCore …"

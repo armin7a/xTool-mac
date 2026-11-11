@@ -17,7 +17,7 @@ struct WriterHost: View {
             if let controller, model.isUnlocked {
                 WriterView(controller: controller)
             } else if let error {
-                EmptyState(symbol: "doc.questionmark", title: "Dokument kann nicht geöffnet werden", message: error)
+                EmptyState(symbol: "doc.questionmark", title: "The document cannot be opened", message: error)
             } else {
                 ProgressView().controlSize(.small)
             }
@@ -39,7 +39,7 @@ struct WriterHost: View {
                 }
                 controller?.tabId = tabId
             } catch {
-                self.error = "Die Datei ist beschädigt oder mit einem Passwort geschützt."
+                self.error = "The file is damaged or protected with a password."
             }
         } else {
             let template = DocTemplates.all.first { $0.id == request.template } ?? DocTemplates.all[0]
@@ -54,7 +54,7 @@ struct WriterHost: View {
 }
 
 enum RibbonTab: String, CaseIterable, Identifiable {
-    case home = "Start", insert = "Einfügen", layout = "Layout", view = "Ansicht", image = "Bild"
+    case home = "Home", insert = "Insert", layout = "Layout", view = "View", image = "Image"
     var id: String { rawValue }
 }
 
@@ -86,7 +86,7 @@ struct WriterView: View {
                 .frame(height: 62)
             Rectangle().fill(XColor.line).frame(height: 1)
             if !controller.ours {
-                Label("Word-Datei aus einem anderen Programm. Beim Speichern legt xTool eine Kopie an – das Original bleibt unverändert.", systemImage: "info.circle")
+                Label("Word file from another app. When you save, xTool creates a copy and leaves the original unchanged.", systemImage: "info.circle")
                     .font(.callout)
                     .padding(.horizontal, 14).padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -101,9 +101,9 @@ struct WriterView: View {
         .onChange(of: controller.imageSelected) { _, sel in
             if sel { ribbon = .image } else if ribbon == .image { ribbon = .home }
         }
-        .alert("Dokument umbenennen", isPresented: $renaming) {
+        .alert("Rename Document", isPresented: $renaming) {
             TextField("Name", text: $newName)
-            Button("Umbenennen") {
+            Button("Rename") {
                 controller.name = newName
                 if let id = controller.nodeId, let drive = model.drive {
                     drive.rename(id, to: newName + ".docx")
@@ -112,23 +112,23 @@ struct WriterView: View {
                 }
                 model.updateTab(controller.tabId, title: controller.name)
             }
-            Button("Abbrechen", role: .cancel) {}
+            Button("Cancel", role: .cancel) {}
         }
-        .alert("PDF erstellt", isPresented: Binding(get: { pdfDone != nil }, set: { if !$0 { pdfDone = nil } })) {
-            Button("PDF öffnen") { if let n = pdfDone { Opener.open(n, model: model) }; pdfDone = nil }
+        .alert("PDF created", isPresented: Binding(get: { pdfDone != nil }, set: { if !$0 { pdfDone = nil } })) {
+            Button("Open PDF") { if let n = pdfDone { Opener.open(n, model: model) }; pdfDone = nil }
             Button("OK", role: .cancel) { pdfDone = nil }
         } message: {
-            Text("„\(pdfDone?.name ?? "")“ liegt verschlüsselt im selben xTool-Ordner.")
+            Text("“\(pdfDone?.name ?? "")” is stored encrypted in the same xTool folder.")
         }
         .sheet(isPresented: $showTable) {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Tabelle einfügen").font(.system(size: 15, weight: .semibold))
-                Stepper("Zeilen: \(tableRows)", value: $tableRows, in: 1...50)
-                Stepper("Spalten: \(tableCols)", value: $tableCols, in: 1...10)
+                Text("Insert table").font(.system(size: 15, weight: .semibold))
+                Stepper("Rows: \(tableRows)", value: $tableRows, in: 1...50)
+                Stepper("Columns: \(tableCols)", value: $tableCols, in: 1...10)
                 HStack {
                     Spacer()
-                    Button("Abbrechen") { showTable = false }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
-                    Button("Einfügen") { controller.insertTable(rows: tableRows, columns: tableCols); showTable = false }
+                    Button("Cancel") { showTable = false }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
+                    Button("Insert") { controller.insertTable(rows: tableRows, columns: tableCols); showTable = false }
                         .keyboardShortcut(.defaultAction).buttonStyle(.xPrimary)
                 }
             }
@@ -162,8 +162,8 @@ struct WriterView: View {
                 Text(controller.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
             }
             .buttonStyle(.plain)
-            .help("Umbenennen")
-            Text(controller.dirty ? "Wird gespeichert" : controller.nodeId != nil ? "Gespeichert" : "")
+            .help("Rename")
+            Text(controller.dirty ? "Saving" : controller.nodeId != nil ? "Saved" : "")
                 .font(.system(size: 11)).foregroundStyle(.tertiary)
             Spacer()
             Picker("", selection: $ribbon) {
@@ -175,18 +175,18 @@ struct WriterView: View {
             .tint(.gray)
             .frame(maxWidth: controller.imageSelected ? 330 : 270)
             Spacer()
-            IconButton(symbol: "arrow.uturn.backward", help: "Rückgängig (⌘Z)") { controller.textView?.undoManager?.undo() }
-            IconButton(symbol: "arrow.uturn.forward", help: "Wiederholen (⇧⌘Z)") { controller.textView?.undoManager?.redo() }
-            IconButton(symbol: "clock.arrow.circlepath", help: "Versionen") {
+            IconButton(symbol: "arrow.uturn.backward", help: "Undo (⌘Z)") { controller.textView?.undoManager?.undo() }
+            IconButton(symbol: "arrow.uturn.forward", help: "Redo (⇧⌘Z)") { controller.textView?.undoManager?.redo() }
+            IconButton(symbol: "clock.arrow.circlepath", help: "Versions") {
                 if controller.dirty { controller.save(model: model, silent: true) }
-                if controller.nodeId != nil { showVersions = true } else { model.showToast("Das Dokument wurde noch nicht gespeichert.") }
+                if controller.nodeId != nil { showVersions = true } else { model.showToast("The document has not been saved yet.") }
             }
             Button { controller.save(model: model) } label: { EmptyView() }
                 .keyboardShortcut("s").opacity(0).frame(width: 0)
-            Button("Als PDF", action: exportPdf)
+            Button("Save as PDF", action: exportPdf)
                 .buttonStyle(.xQuiet)
                 .keyboardShortcut("p")
-                .help("Als PDF in denselben xTool-Ordner speichern")
+                .help("Save as a PDF in the same xTool folder")
         }
         .padding(.horizontal, 14)
         .frame(height: 40)
@@ -213,86 +213,86 @@ struct WriterView: View {
     }
 
     @ViewBuilder private var homeRibbon: some View {
-        group("Schrift") {
+        group("Font") {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 4) {
-                    Menu("Schriftart") {
+                    Menu("Typeface") {
                         ForEach(["Calibri", "Helvetica Neue", "Arial", "Times New Roman", "Georgia", "Avenir Next", "Menlo", "Courier New", "Verdana"], id: \.self) { f in
                             Button(f) { controller.setFontFamily(f) }
                         }
                         Divider()
-                        Button("Alle Schriften … (⌘T)") { NSFontManager.shared.orderFrontFontPanel(nil) }
+                        Button("All Fonts … (⌘T)") { NSFontManager.shared.orderFrontFontPanel(nil) }
                     }
                     .frame(width: 100)
-                    Menu("Größe") {
+                    Menu("Size") {
                         ForEach([8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72], id: \.self) { s in Button("\(s) pt") { controller.setFontSize(CGFloat(s)) } }
                     }
                     .frame(width: 70)
-                    tool("textformat.size.larger", "Größer") { controller.growFont(1) }
-                    tool("textformat.size.smaller", "Kleiner") { controller.growFont(-1) }
+                    tool("textformat.size.larger", "Bigger") { controller.growFont(1) }
+                    tool("textformat.size.smaller", "Smaller") { controller.growFont(-1) }
                     Menu {
-                        Button("GROSSBUCHSTABEN") { controller.changeCase(0) }
+                        Button("UPPERCASE") { controller.changeCase(0) }
                         Button("kleinbuchstaben") { controller.changeCase(1) }
-                        Button("Erster Buchstabe Groß") { controller.changeCase(2) }
+                        Button("Capitalize Each Word") { controller.changeCase(2) }
                     } label: { Image(systemName: "textformat") }
                     .frame(width: 40)
-                    .help("Groß-/Kleinschreibung")
+                    .help("Change case")
                 }
                 HStack(spacing: 2) {
-                    tool("bold", "Fett (⌘B)") { controller.toggleTrait(.boldFontMask) }.keyboardShortcut("b")
-                    tool("italic", "Kursiv (⌘I)") { controller.toggleTrait(.italicFontMask) }.keyboardShortcut("i")
-                    tool("underline", "Unterstrichen (⌘U)") { controller.toggleAttribute(.underlineStyle) }.keyboardShortcut("u")
-                    tool("strikethrough", "Durchgestrichen") { controller.toggleAttribute(.strikethroughStyle) }
-                    tool("textformat.superscript", "Hochgestellt") { controller.raiseText() }
-                    tool("textformat.subscript", "Tiefgestellt") { controller.lowerText() }
+                    tool("bold", "Bold (⌘B)") { controller.toggleTrait(.boldFontMask) }.keyboardShortcut("b")
+                    tool("italic", "Italic (⌘I)") { controller.toggleTrait(.italicFontMask) }.keyboardShortcut("i")
+                    tool("underline", "Underline (⌘U)") { controller.toggleAttribute(.underlineStyle) }.keyboardShortcut("u")
+                    tool("strikethrough", "Strikethrough") { controller.toggleAttribute(.strikethroughStyle) }
+                    tool("textformat.superscript", "Superscript") { controller.raiseText() }
+                    tool("textformat.subscript", "Subscript") { controller.lowerText() }
                     ColorPicker("", selection: $textColor).labelsHidden().frame(width: 26)
                         .onChange(of: textColor) { _, c in controller.setColor(NSColor(c), key: .foregroundColor) }
-                        .help("Schriftfarbe")
-                    tool("highlighter", "Markieren") { controller.setColor(NSColor(highlight), key: .backgroundColor) }
-                    tool("eraser", "Markierung entfernen") { controller.setColor(nil, key: .backgroundColor) }
-                    tool("paintbrush", controller.painterArmed ? "Format wird übertragen – jetzt Text markieren" : "Format übertragen") { controller.armPainter() }
+                        .help("Text color")
+                    tool("highlighter", "Highlight") { controller.setColor(NSColor(highlight), key: .backgroundColor) }
+                    tool("eraser", "Remove highlight") { controller.setColor(nil, key: .backgroundColor) }
+                    tool("paintbrush", controller.painterArmed ? "Copying format: now select text" : "Copy format") { controller.armPainter() }
                         .foregroundStyle(controller.painterArmed ? XColor.accent : Color.primary)
-                    tool("clear", "Formatierung löschen") { controller.clearFormatting() }
+                    tool("clear", "Clear formatting") { controller.clearFormatting() }
                 }
             }
         }
-        group("Absatz") {
+        group("Paragraph") {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 2) {
                     Menu {
-                        Button("● Punkt") { controller.toggleList(.disc) }
-                        Button("○ Kreis") { controller.toggleList(.circle) }
-                        Button("■ Quadrat") { controller.toggleList(.square) }
-                        Button("– Strich") { controller.toggleList(.hyphen) }
-                    } label: { Image(systemName: "list.bullet") }.frame(width: 40).help("Aufzählung")
+                        Button("● Bullet") { controller.toggleList(.disc) }
+                        Button("○ Circle") { controller.toggleList(.circle) }
+                        Button("■ Square") { controller.toggleList(.square) }
+                        Button("– Dash") { controller.toggleList(.hyphen) }
+                    } label: { Image(systemName: "list.bullet") }.frame(width: 40).help("Bulleted list")
                     Menu {
                         Button("1. 2. 3.") { controller.toggleList(.decimal) }
                         Button("a. b. c.") { controller.toggleList(.lowercaseAlpha) }
                         Button("A. B. C.") { controller.toggleList(.uppercaseAlpha) }
                         Button("i. ii. iii.") { controller.toggleList(.lowercaseRoman) }
                         Button("I. II. III.") { controller.toggleList(.uppercaseRoman) }
-                    } label: { Image(systemName: "list.number") }.frame(width: 40).help("Nummerierung")
-                    tool("decrease.indent", "Einzug verkleinern") { controller.indent(-18) }
-                    tool("increase.indent", "Einzug vergrößern") { controller.indent(18) }
+                    } label: { Image(systemName: "list.number") }.frame(width: 40).help("Numbered list")
+                    tool("decrease.indent", "Decrease indent") { controller.indent(-18) }
+                    tool("increase.indent", "Increase indent") { controller.indent(18) }
                     Menu {
                         ForEach([1.0, 1.15, 1.5, 2.0, 3.0], id: \.self) { f in Button(String(format: "%.2f", f)) { controller.lineSpacing(f) } }
-                    } label: { Image(systemName: "arrow.up.and.down.text.horizontal") }.frame(width: 40).help("Zeilenabstand")
+                    } label: { Image(systemName: "arrow.up.and.down.text.horizontal") }.frame(width: 40).help("Line spacing")
                 }
                 HStack(spacing: 2) {
-                    tool("text.alignleft", "Linksbündig") { controller.align(.left) }
-                    tool("text.aligncenter", "Zentriert") { controller.align(.center) }
-                    tool("text.alignright", "Rechtsbündig") { controller.align(.right) }
-                    tool("text.justify", "Blocksatz") { controller.align(.justified) }
+                    tool("text.alignleft", "Align left") { controller.align(.left) }
+                    tool("text.aligncenter", "Center") { controller.align(.center) }
+                    tool("text.alignright", "Align right") { controller.align(.right) }
+                    tool("text.justify", "Justify") { controller.align(.justified) }
                     Menu {
-                        Button("Kein Abstand") { controller.paragraphSpacing(before: 0, after: 0) }
-                        Button("Abstand nach: 6 pt") { controller.paragraphSpacing(before: nil, after: 6) }
-                        Button("Abstand nach: 12 pt") { controller.paragraphSpacing(before: nil, after: 12) }
-                        Button("Abstand vor: 12 pt") { controller.paragraphSpacing(before: 12, after: nil) }
-                    } label: { Image(systemName: "text.line.first.and.arrowtriangle.forward") }.frame(width: 40).help("Absatzabstand")
+                        Button("No Spacing") { controller.paragraphSpacing(before: 0, after: 0) }
+                        Button("Space After: 6 pt") { controller.paragraphSpacing(before: nil, after: 6) }
+                        Button("Space After: 12 pt") { controller.paragraphSpacing(before: nil, after: 12) }
+                        Button("Space Before: 12 pt") { controller.paragraphSpacing(before: 12, after: nil) }
+                    } label: { Image(systemName: "text.line.first.and.arrowtriangle.forward") }.frame(width: 40).help("Paragraph spacing")
                 }
             }
         }
-        group("Formatvorlagen") {
+        group("Styles") {
             LazyHGrid(rows: [GridItem(.fixed(22)), GridItem(.fixed(22))], spacing: 2) {
                 ForEach(DocStyle.all) { s in
                     Button { controller.applyStyle(s) } label: {
@@ -304,26 +304,26 @@ struct WriterView: View {
                 }
             }
         }
-        group("Bearbeiten") {
+        group("Edit") {
             VStack(alignment: .leading, spacing: 4) {
-                Button { controller.showFind() } label: { Label("Suchen", systemImage: "magnifyingglass") }.buttonStyle(.borderless).keyboardShortcut("f")
-                Button { controller.showFind(replace: true) } label: { Label("Ersetzen", systemImage: "arrow.left.arrow.right") }.buttonStyle(.borderless)
+                Button { controller.showFind() } label: { Label("Find", systemImage: "magnifyingglass") }.buttonStyle(.borderless).keyboardShortcut("f")
+                Button { controller.showFind(replace: true) } label: { Label("Replace", systemImage: "arrow.left.arrow.right") }.buttonStyle(.borderless)
             }
         }
     }
 
     @ViewBuilder private var insertRibbon: some View {
-        group("Illustrationen") {
+        group("Illustrations") {
             HStack(spacing: 4) {
                 Menu {
-                    Button("Aus xTool …") { showImagePicker = true }
-                    Button("Vom Mac …", action: pickImageFromMac)
-                } label: { bigLabel("Bild", "photo.badge.plus") }.frame(width: 64)
-                big("Tabelle", "tablecells.badge.ellipsis") { showTable = true }
+                    Button("From xTool …") { showImagePicker = true }
+                    Button("From This Mac …", action: pickImageFromMac)
+                } label: { bigLabel("Image", "photo.badge.plus") }.frame(width: 64)
+                big("Table", "tablecells.badge.ellipsis") { showTable = true }
             }
         }
-        group("Seiten") {
-            big("Inhalts-\nverzeichnis", "list.bullet.indent") { controller.insertTableOfContents() }
+        group("Pages") {
+            big("Table of\nContents", "list.bullet.indent") { controller.insertTableOfContents() }
         }
         group("Text") {
             HStack(spacing: 4) {
@@ -332,7 +332,7 @@ struct WriterView: View {
                              Date().formatted(date: .complete, time: .omitted), Date().formatted(date: .numeric, time: .shortened)], id: \.self) { d in
                         Button(d) { controller.insertText(d) }
                     }
-                } label: { bigLabel("Datum", "calendar") }.frame(width: 64)
+                } label: { bigLabel("Date", "calendar") }.frame(width: 64)
                 big("Symbol", "character") { showSymbols = true }
                     .popover(isPresented: $showSymbols) {
                         LazyVGrid(columns: Array(repeating: GridItem(.fixed(30)), count: 8), spacing: 4) {
@@ -344,12 +344,12 @@ struct WriterView: View {
                     }
             }
         }
-        group("Kopf- und Fußzeile") {
+        group("Header and Footer") {
             VStack(alignment: .leading, spacing: 4) {
-                TextField("Kopfzeile", text: $controller.page.header).frame(width: 200).onSubmit { controller.applyPage(); controller.markDirty(model) }
+                TextField("Header", text: $controller.page.header).frame(width: 200).onSubmit { controller.applyPage(); controller.markDirty(model) }
                 HStack {
-                    TextField("Fußzeile", text: $controller.page.footer).frame(width: 140).onSubmit { controller.applyPage(); controller.markDirty(model) }
-                    Toggle("Seitenzahlen", isOn: $controller.page.pageNumbers).toggleStyle(.checkbox)
+                    TextField("Footer", text: $controller.page.footer).frame(width: 140).onSubmit { controller.applyPage(); controller.markDirty(model) }
+                    Toggle("Page numbers", isOn: $controller.page.pageNumbers).toggleStyle(.checkbox)
                 }
             }
             .onChange(of: controller.page) { _, _ in controller.applyPage(); controller.markDirty(model) }
@@ -357,11 +357,11 @@ struct WriterView: View {
     }
 
     @ViewBuilder private var layoutRibbon: some View {
-        group("Seite einrichten") {
+        group("Page Setup") {
             HStack(spacing: 8) {
                 Picker("Format", selection: $controller.page.format) { ForEach(PageSetup.formats, id: \.self) { Text($0).tag($0) } }.frame(width: 120)
-                Picker("Ausrichtung", selection: $controller.page.landscape) { Text("Hochformat").tag(false); Text("Querformat").tag(true) }.frame(width: 200)
-                Menu("Seitenränder") {
+                Picker("Orientation", selection: $controller.page.landscape) { Text("Portrait").tag(false); Text("Landscape").tag(true) }.frame(width: 200)
+                Menu("Margins") {
                     ForEach(PageSetup.marginPresets, id: \.name) { m in
                         Button("\(m.name) · \(m.top.formatted()) / \(m.bottom.formatted()) / \(m.left.formatted()) / \(m.right.formatted()) cm") {
                             controller.page.top = m.top; controller.page.bottom = m.bottom; controller.page.left = m.left; controller.page.right = m.right
@@ -373,48 +373,48 @@ struct WriterView: View {
             .onChange(of: controller.page) { _, _ in controller.applyPage(); controller.markDirty(model) }
         }
         group("Info") {
-            Text("\(controller.page.format) · \(controller.page.landscape ? "quer" : "hoch") · Ränder \(controller.page.left.formatted()) cm")
+            Text("\(controller.page.format) · \(controller.page.landscape ? "landscape" : "portrait") · margins \(controller.page.left.formatted()) cm")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }
 
     @ViewBuilder private var viewRibbon: some View {
-        group("Anzeigen") {
-            Toggle("Gliederung", isOn: $showNav).toggleStyle(.button)
+        group("Show") {
+            Toggle("Outline", isOn: $showNav).toggleStyle(.button)
         }
         group("Zoom") {
             HStack {
                 Button("100 %") { zoom = 1 }
-                Button("Seitenbreite") { zoom = 1.25 }
+                Button("Page Width") { zoom = 1.25 }
             }
         }
-        group("Fenster") {
-            Button { model.focusMode.toggle() } label: { Label("Fokusmodus", systemImage: "arrow.up.left.and.arrow.down.right") }
+        group("Window") {
+            Button { model.focusMode.toggle() } label: { Label("Focus Mode", systemImage: "arrow.up.left.and.arrow.down.right") }
         }
     }
 
     @ViewBuilder private var imageRibbon: some View {
-        group("Größe (Breite des Textbereichs)") {
+        group("Size (width of the text area)") {
             HStack(spacing: 4) {
                 ForEach([0.25, 0.5, 0.75, 1.0], id: \.self) { f in
                     Button("\(Int(f * 100)) %") { controller.resizeImage(fraction: f); controller.markDirty(model) }
                 }
             }
         }
-        group("Ausrichtung") {
+        group("Alignment") {
             HStack(spacing: 2) {
-                tool("text.alignleft", "Links") { controller.alignImage(.left) }
-                tool("text.aligncenter", "Zentriert") { controller.alignImage(.center) }
-                tool("text.alignright", "Rechts") { controller.alignImage(.right) }
+                tool("text.alignleft", "Left") { controller.alignImage(.left) }
+                tool("text.aligncenter", "Center") { controller.alignImage(.center) }
+                tool("text.alignright", "Right") { controller.alignImage(.right) }
             }
         }
-        group("Anordnen") {
+        group("Arrange") {
             HStack(spacing: 2) {
-                tool("rotate.right", "Drehen") { controller.rotateImage(); controller.markDirty(model) }
-                tool("trash", "Löschen") { controller.deleteImage(); controller.markDirty(model) }
+                tool("rotate.right", "Rotate") { controller.rotateImage(); controller.markDirty(model) }
+                tool("trash", "Delete") { controller.deleteImage(); controller.markDirty(model) }
             }
         }
-        Text("Tipp: Bild anklicken und ziehen verschiebt es an eine andere Textstelle.")
+        Text("Tip: click and drag an image to move it to another place in the text.")
             .font(.caption).foregroundStyle(.secondary).frame(width: 220, alignment: .leading).padding(.leading, 8)
     }
 
@@ -449,9 +449,9 @@ struct WriterView: View {
 
     private var navigation: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Gliederung").font(.system(size: 12, weight: .semibold)).padding(12)
+            Text("Outline").font(.system(size: 12, weight: .semibold)).padding(12)
             if controller.headings.isEmpty {
-                Text("Weise Absätzen „Überschrift 1–3“ zu, dann erscheinen sie hier.").font(.caption).foregroundStyle(.secondary).padding(.horizontal, 12)
+                Text("Give paragraphs the style “Heading 1–3” and they appear here.").font(.caption).foregroundStyle(.secondary).padding(.horizontal, 12)
             }
             List(Array(controller.headings.enumerated()), id: \.offset) { _, h in
                 Button { controller.jump(to: h.range) } label: {
@@ -468,7 +468,7 @@ struct WriterView: View {
             Text(controller.pageInfo).font(.caption).foregroundStyle(.secondary)
             Text(controller.stats).font(.caption).foregroundStyle(.tertiary)
             Spacer()
-            Text("\(controller.page.format) \(controller.page.landscape ? "quer" : "hoch")").font(.caption).foregroundStyle(.secondary)
+            Text("\(controller.page.format) \(controller.page.landscape ? "landscape" : "portrait")").font(.caption).foregroundStyle(.secondary)
             Slider(value: $zoom, in: 0.5...2.0, step: 0.1).controlSize(.mini).frame(width: 100)
             Text("\(Int(zoom * 100)) %").font(.caption).monospacedDigit().frame(width: 44, alignment: .trailing)
         }
@@ -497,7 +497,7 @@ struct WriterView: View {
             model.save()
             pdfDone = drive.get(node.id)
         } catch {
-            model.showToast("PDF-Export fehlgeschlagen")
+            model.showToast("PDF export failed")
         }
     }
 }
@@ -605,9 +605,9 @@ struct VaultImagePicker: View {
     var body: some View {
         let images = model.drive?.allFiles().filter { FileTypes.category($0) == .image } ?? []
         VStack(alignment: .leading, spacing: 12) {
-            Text("Bild aus xTool wählen").font(.system(size: 15, weight: .semibold))
+            Text("Choose an image from xTool").font(.system(size: 15, weight: .semibold))
             if images.isEmpty {
-                Text("Keine Bilder in xTool gefunden.").foregroundStyle(.secondary)
+                Text("No images found in xTool.").foregroundStyle(.secondary)
             } else {
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 10)], spacing: 10) {
@@ -622,8 +622,8 @@ struct VaultImagePicker: View {
             }
             HStack {
                 Spacer()
-                Button("Abbrechen") { done(nil) }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
-                Button("Einfügen") { done(selected.flatMap { model.drive?.get($0) }) }
+                Button("Cancel") { done(nil) }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
+                Button("Insert") { done(selected.flatMap { model.drive?.get($0) }) }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.xPrimary)
                     .disabled(selected == nil)

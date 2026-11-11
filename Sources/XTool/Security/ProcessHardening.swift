@@ -25,14 +25,16 @@ struct NoWritingTools: ViewModifier {
     }
 }
 
-/// Removes what xTool copied once the vault locks. Whatever other apps put on the clipboard stays:
-/// a change made while xTool was in front is ours.
+/// Removes what xTool copied once the vault locks, and in any case two minutes after the copy, like a
+/// password manager. Whatever other apps put on the clipboard stays: a change made while xTool was in front is ours.
 @MainActor
 final class ClipboardGuard {
     static let shared = ClipboardGuard()
     private var baseline = NSPasteboard.general.changeCount
     private var lastOwnChange: Int?
     private var observers: [NSObjectProtocol] = []
+    private var expiry: Task<Void, Never>?
+    static let lifetime: UInt64 = 120
 
     func start() {
         guard observers.isEmpty else { return }
@@ -47,11 +49,26 @@ final class ClipboardGuard {
 
     private func noteOwnChange() {
         let current = NSPasteboard.general.changeCount
-        if current != baseline { lastOwnChange = current }
+        if current != baseline, lastOwnChange != current {
+            lastOwnChange = current
+            scheduleExpiry()
+        }
     }
 
     /// Called by the editors, which know for sure that a copy came from xTool.
-    func noteCopied() { lastOwnChange = NSPasteboard.general.changeCount }
+    func noteCopied() {
+        lastOwnChange = NSPasteboard.general.changeCount
+        scheduleExpiry()
+    }
+
+    private func scheduleExpiry() {
+        expiry?.cancel()
+        expiry = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: Self.lifetime * 1_000_000_000)
+            guard !Task.isCancelled else { return }
+            ClipboardGuard.shared.clearIfOurs()
+        }
+    }
 
     func clearIfOurs() {
         if NSApp.isActive { noteOwnChange() }
@@ -60,5 +77,7 @@ final class ClipboardGuard {
         }
         baseline = NSPasteboard.general.changeCount
         lastOwnChange = nil
+        expiry?.cancel()
+        expiry = nil
     }
 }

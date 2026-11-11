@@ -90,14 +90,14 @@ struct FilesView: View {
                     RoundedRectangle(cornerRadius: XRadius.medium, style: .continuous)
                         .strokeBorder(XColor.accent, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
                         .background(XColor.accent.opacity(0.06), in: RoundedRectangle(cornerRadius: XRadius.medium, style: .continuous))
-                        .overlay(Text("Loslassen zum Hinzufügen").font(.system(size: 13, weight: .medium)))
+                        .overlay(Text("Drop to add").font(.system(size: 13, weight: .medium)))
                         .padding(10)
                         .allowsHitTesting(false)
                 }
             }
             if !selection.isEmpty { selectionBar }
         }
-        .searchable(text: $search, placement: .toolbar, prompt: "Suchen")
+        .searchable(text: $search, placement: .toolbar, prompt: "Search")
         .toolbar { toolbarContent }
         .inspector(isPresented: Binding(get: { model.settings.showDetails }, set: { model.settings.showDetails = $0 })) {
             DetailsPanel(selection: selection, nodes: nodes)
@@ -121,23 +121,23 @@ struct FilesView: View {
         }
         .onChange(of: model.currentFolderId) { _, _ in model.selection = [] }
         .onChange(of: model.section) { _, _ in model.selection = []; search = "" }
-        .alert("Umbenennen", isPresented: Binding(get: { renameTarget != nil }, set: { if !$0 { renameTarget = nil } })) {
+        .alert("Rename", isPresented: Binding(get: { renameTarget != nil }, set: { if !$0 { renameTarget = nil } })) {
             TextField("Name", text: $renameText)
-            Button("Umbenennen") {
+            Button("Rename") {
                 if let t = renameTarget { model.drive?.rename(t.id, to: renameText); model.save() }
                 renameTarget = nil
             }
-            Button("Abbrechen", role: .cancel) { renameTarget = nil }
+            Button("Cancel", role: .cancel) { renameTarget = nil }
         }
-        .confirmationDialog("Endgültig löschen?", isPresented: Binding(get: { confirmDelete != nil }, set: { if !$0 { confirmDelete = nil } })) {
-            Button("Endgültig löschen", role: .destructive) {
+        .confirmationDialog("Delete permanently?", isPresented: Binding(get: { confirmDelete != nil }, set: { if !$0 { confirmDelete = nil } })) {
+            Button("Delete Permanently", role: .destructive) {
                 if let ids = confirmDelete { model.drive?.deletePermanently(ids); model.selection = []; model.save() }
                 confirmDelete = nil
             }
-        } message: { Text("Das lässt sich nicht rückgängig machen.") }
-        .confirmationDialog("Papierkorb leeren?", isPresented: $confirmEmptyTrash) {
-            Button("Leeren", role: .destructive) { model.drive?.emptyTrash(); model.selection = []; model.save() }
-        } message: { Text("Das lässt sich nicht rückgängig machen.") }
+        } message: { Text("This cannot be undone.") }
+        .confirmationDialog("Empty the trash?", isPresented: $confirmEmptyTrash) {
+            Button("Empty", role: .destructive) { model.drive?.emptyTrash(); model.selection = []; model.save() }
+        } message: { Text("This cannot be undone.") }
         .sheet(isPresented: Binding(get: { versionsTarget != nil }, set: { if !$0 { versionsTarget = nil } })) {
             if let id = versionsTarget { VersionsView(nodeId: id) { versionsTarget = nil } }
         }
@@ -147,7 +147,7 @@ struct FilesView: View {
                     let moved = model.drive?.move(ids, to: target.id.isEmpty ? nil : target.id) ?? 0
                     model.selection = []
                     model.save()
-                    model.showToast(moved == 1 ? "Verschoben" : "\(moved) Elemente verschoben")
+                    model.showToast(moved == 1 ? "Moved" : "Moved \(moved) items")
                 }
                 moveTargets = nil
             }
@@ -159,7 +159,7 @@ struct FilesView: View {
     @ViewBuilder private var header: some View {
         HStack(spacing: 6) {
             if !search.isEmpty {
-                Text("Ergebnisse für „\(search)“").font(.system(size: 15, weight: .semibold)).lineLimit(1)
+                Text("Results for “\(search)”").font(.system(size: 15, weight: .semibold)).lineLimit(1)
             } else if mode == .drive {
                 let path = model.drive?.path(of: model.currentFolderId) ?? []
                 crumb(AppSection.drive.title, id: nil, isLast: path.isEmpty)
@@ -169,7 +169,7 @@ struct FilesView: View {
                 }
             } else {
                 Text(mode.title).font(.system(size: 15, weight: .semibold))
-                if mode == .trash { Text("Wird nach 30 Tagen gelöscht").font(.system(size: 11)).foregroundStyle(.tertiary).padding(.leading, 4) }
+                if mode == .trash { Text("Deleted after 30 days").font(.system(size: 11)).foregroundStyle(.tertiary).padding(.leading, 4) }
             }
             Spacer()
         }
@@ -189,30 +189,30 @@ struct FilesView: View {
     @ToolbarContentBuilder private var toolbarContent: some ToolbarContent {
         ToolbarItemGroup(placement: .automatic) {
             if mode == .trash {
-                Button { confirmEmptyTrash = true } label: { Label("Papierkorb leeren", systemImage: "trash.slash") }
-                    .help("Papierkorb leeren")
+                Button { confirmEmptyTrash = true } label: { Label("Empty Trash", systemImage: "trash.slash") }
+                    .help("Empty Trash")
                     .disabled(items.isEmpty)
             } else {
                 Menu {
-                    Picker("Sortieren nach", selection: Binding(get: { model.settings.sortBy }, set: { model.settings.sortBy = $0 })) {
+                    Picker("Sort by", selection: Binding(get: { model.settings.sortBy }, set: { model.settings.sortBy = $0 })) {
                         Text("Name").tag("Name")
-                        Text("Änderungsdatum").tag("Modified")
-                        Text("Größe").tag("Size")
-                        Text("Typ").tag("Type")
+                        Text("Date modified").tag("Modified")
+                        Text("Size").tag("Size")
+                        Text("Kind").tag("Type")
                     }
                     .pickerStyle(.inline)
-                    Toggle("Absteigend", isOn: Binding(get: { model.settings.sortDescending }, set: { model.settings.sortDescending = $0 }))
-                } label: { Label("Sortieren", systemImage: "arrow.up.arrow.down") }
+                    Toggle("Descending", isOn: Binding(get: { model.settings.sortDescending }, set: { model.settings.sortDescending = $0 }))
+                } label: { Label("Sort", systemImage: "arrow.up.arrow.down") }
                 .menuIndicator(.hidden)
                 .tint(.primary)
-                .help("Sortieren")
+                .help("Sort")
                 Button { model.settings.gridView.toggle() } label: {
-                    Label("Ansicht", systemImage: model.settings.gridView ? "list.bullet" : "square.grid.2x2")
+                    Label("View", systemImage: model.settings.gridView ? "list.bullet" : "square.grid.2x2")
                 }
-                .help(model.settings.gridView ? "Als Liste anzeigen" : "Als Kacheln anzeigen")
+                .help(model.settings.gridView ? "Show as List" : "Show as Icons")
             }
             Button { model.settings.showDetails.toggle() } label: { Label("Details", systemImage: "info.circle") }
-                .help("Details ein- oder ausblenden")
+                .help("Show or hide details")
         }
     }
 
@@ -220,20 +220,20 @@ struct FilesView: View {
     private var selectionBar: some View {
         let ids = Array(selection)
         return HStack(spacing: 2) {
-            Text(ids.count == 1 ? "1 ausgewählt" : "\(ids.count) ausgewählt")
+            Text("\(ids.count) selected")
                 .font(.system(size: 12)).foregroundStyle(.secondary).padding(.horizontal, 8)
             Spacer()
             if mode == .trash {
-                Button("Wiederherstellen") { restore(ids) }.buttonStyle(.xQuiet)
-                Button("Endgültig löschen") { confirmDelete = ids }.buttonStyle(.xQuiet).foregroundStyle(XColor.danger)
+                Button("Restore") { restore(ids) }.buttonStyle(.xQuiet)
+                Button("Delete Permanently") { confirmDelete = ids }.buttonStyle(.xQuiet).foregroundStyle(XColor.danger)
             } else {
-                Button { model.exportWithPanel(ids) } label: { Label("Exportieren", systemImage: "square.and.arrow.up") }
+                Button { model.exportWithPanel(ids) } label: { Label("Export", systemImage: "square.and.arrow.up") }
                     .buttonStyle(.xQuiet)
-                    .help("Entschlüsselt in einen Ordner auf dem Mac speichern (⇧⌘E)")
-                Button { moveTargets = ids } label: { Label("Verschieben", systemImage: "folder") }.buttonStyle(.xQuiet)
-                Button { trash(ids) } label: { Label("Löschen", systemImage: "trash") }.buttonStyle(.xQuiet)
+                    .help("Save decrypted to a folder on this Mac (⇧⌘E)")
+                Button { moveTargets = ids } label: { Label("Move", systemImage: "folder") }.buttonStyle(.xQuiet)
+                Button { trash(ids) } label: { Label("Delete", systemImage: "trash") }.buttonStyle(.xQuiet)
             }
-            IconButton(symbol: "xmark", help: "Auswahl aufheben") { model.selection = [] }
+            IconButton(symbol: "xmark", help: "Clear selection") { model.selection = [] }
         }
         .padding(.horizontal, 10)
         .frame(height: 40)
@@ -278,11 +278,11 @@ struct FilesView: View {
                     }
                 }
             }
-            TableColumn(mode == .trash ? "Gelöscht" : "Geändert") { node in
+            TableColumn(mode == .trash ? "Deleted" : "Modified") { node in
                 Text(FileTypes.date(mode == .trash ? (node.deletedAt ?? node.modified) : node.modified)).foregroundStyle(.secondary)
             }
             .width(min: 100, ideal: 130)
-            TableColumn("Größe") { node in Text(node.isFolder ? "—" : FileTypes.size(node.size)).foregroundStyle(.secondary).monospacedDigit() }
+            TableColumn("Size") { node in Text(node.isFolder ? "—" : FileTypes.size(node.size)).foregroundStyle(.secondary).monospacedDigit() }
                 .width(min: 60, ideal: 80)
         }
         .scrollContentBackground(.hidden)
@@ -300,12 +300,12 @@ struct FilesView: View {
 
     @ViewBuilder private var emptyState: some View {
         switch (mode, search.isEmpty) {
-        case (_, false): EmptyState(symbol: "magnifyingglass", title: "Nichts gefunden", message: "Für „\(search)“ gibt es keine Treffer.")
-        case (.trash, _): EmptyState(symbol: "trash", title: "Der Papierkorb ist leer", message: "Gelöschte Elemente bleiben hier 30 Tage.")
-        case (.recent, _): EmptyState(symbol: "clock", title: "Noch nichts geöffnet", message: "Zuletzt geöffnete Dateien erscheinen hier.")
+        case (_, false): EmptyState(symbol: "magnifyingglass", title: "Nothing found", message: "No results for “\(search)”.")
+        case (.trash, _): EmptyState(symbol: "trash", title: "The trash is empty", message: "Deleted items stay here for 30 days.")
+        case (.recent, _): EmptyState(symbol: "clock", title: "Nothing opened yet", message: "Recently opened files appear here.")
         default:
-            EmptyState(symbol: "tray.and.arrow.down", title: "Noch keine Dateien hier", message: "Zieh Dateien aus dem Finder hierher.") {
-                Button("Dateien hinzufügen …") { model.importFiles(Panels.chooseFilesToImport(), into: model.currentFolderId) }.buttonStyle(.xPrimary)
+            EmptyState(symbol: "tray.and.arrow.down", title: "No files here yet", message: "Drag files here from the Finder.") {
+                Button("Add Files …") { model.importFiles(Panels.chooseFilesToImport(), into: model.currentFolderId) }.buttonStyle(.xPrimary)
             }
             .contextMenu { backgroundMenu }
         }
@@ -314,41 +314,41 @@ struct FilesView: View {
     // MARK: menus
 
     @ViewBuilder private var backgroundMenu: some View {
-        Button("Dateien hinzufügen …") { model.importFiles(Panels.chooseFilesToImport(), into: model.currentFolderId) }
+        Button("Add Files …") { model.importFiles(Panels.chooseFilesToImport(), into: model.currentFolderId) }
         if !model.clipboard.ids.isEmpty {
-            Button("Einfügen") { paste(into: model.currentFolderId) }
+            Button("Paste") { paste(into: model.currentFolderId) }
         }
     }
 
     @ViewBuilder private func menu(for ids: [String]) -> some View {
         let nodes = ids.compactMap { model.drive?.get($0) }
         if mode == .trash {
-            Button { restore(ids) } label: { Label("Wiederherstellen", systemImage: "arrow.uturn.backward") }
-            Button(role: .destructive) { confirmDelete = ids } label: { Label("Endgültig löschen", systemImage: "trash.slash") }
+            Button { restore(ids) } label: { Label("Restore", systemImage: "arrow.uturn.backward") }
+            Button(role: .destructive) { confirmDelete = ids } label: { Label("Delete Permanently", systemImage: "trash.slash") }
         } else {
             if nodes.count == 1, let n = nodes.first {
-                Button { open(n) } label: { Label("Öffnen", systemImage: "arrow.up.forward.app") }
+                Button { open(n) } label: { Label("Open", systemImage: "arrow.up.forward.app") }
                 if mode != .drive || !search.isEmpty {
-                    Button { model.goToFolder(n.parentId); model.selection = [n.id] } label: { Label("Speicherort zeigen", systemImage: "folder") }
+                    Button { model.goToFolder(n.parentId); model.selection = [n.id] } label: { Label("Show in Folder", systemImage: "folder") }
                 }
                 Divider()
             }
-            Button { model.exportWithPanel(ids) } label: { Label("Exportieren …", systemImage: "square.and.arrow.up") }
+            Button { model.exportWithPanel(ids) } label: { Label("Export …", systemImage: "square.and.arrow.up") }
             Divider()
             if nodes.count == 1, let n = nodes.first {
-                Button { renameText = n.name; renameTarget = n } label: { Label("Umbenennen", systemImage: "pencil") }
+                Button { renameText = n.name; renameTarget = n } label: { Label("Rename", systemImage: "pencil") }
                 if !n.isFolder {
-                    Button { versionsTarget = n.id } label: { Label("Versionen …", systemImage: "clock.arrow.circlepath") }
+                    Button { versionsTarget = n.id } label: { Label("Versions …", systemImage: "clock.arrow.circlepath") }
                 }
             }
-            Button { model.clipboard = (ids, false); model.showToast(ids.count == 1 ? "Kopiert" : "\(ids.count) Elemente kopiert") } label: { Label("Kopieren", systemImage: "doc.on.doc") }
-            Button { model.clipboard = (ids, true); model.showToast(ids.count == 1 ? "Ausgeschnitten" : "\(ids.count) Elemente ausgeschnitten") } label: { Label("Ausschneiden", systemImage: "scissors") }
+            Button { model.clipboard = (ids, false); model.showToast(ids.count == 1 ? "Copied" : "Copied \(ids.count) items") } label: { Label("Copy", systemImage: "doc.on.doc") }
+            Button { model.clipboard = (ids, true); model.showToast(ids.count == 1 ? "Cut" : "Cut \(ids.count) items") } label: { Label("Cut", systemImage: "scissors") }
             if nodes.count == 1, let n = nodes.first, n.isFolder, !model.clipboard.ids.isEmpty {
-                Button { paste(into: n.id) } label: { Label("Hier einfügen", systemImage: "doc.on.clipboard") }
+                Button { paste(into: n.id) } label: { Label("Paste Here", systemImage: "doc.on.clipboard") }
             }
-            Button { moveTargets = ids } label: { Label("Verschieben …", systemImage: "folder") }
+            Button { moveTargets = ids } label: { Label("Move …", systemImage: "folder") }
             Divider()
-            Button(role: .destructive) { trash(ids) } label: { Label("In den Papierkorb", systemImage: "trash") }
+            Button(role: .destructive) { trash(ids) } label: { Label("Move to Trash", systemImage: "trash") }
         }
     }
 
@@ -364,7 +364,7 @@ struct FilesView: View {
 
     private func open(_ node: Node) {
         if mode == .trash {
-            model.showToast("Stelle das Element zuerst wieder her.")
+            model.showToast("Restore the item first.")
             return
         }
         Opener.open(node, model: model)
@@ -375,14 +375,14 @@ struct FilesView: View {
         model.drive?.trash(ids)
         model.selection = []
         model.save()
-        model.showToast(ids.count == 1 ? "In den Papierkorb gelegt" : "\(ids.count) Elemente in den Papierkorb gelegt")
+        model.showToast(ids.count == 1 ? "Moved to the trash" : "Moved \(ids.count) items to the trash")
     }
 
     private func restore(_ ids: [String]) {
         model.drive?.restore(ids)
         model.selection = []
         model.save()
-        model.showToast("Wiederhergestellt")
+        model.showToast("Restored")
     }
 
     private func paste(into target: String?) {
@@ -403,7 +403,7 @@ struct FilesView: View {
         if moved > 0 {
             model.selection = []
             model.save()
-            model.showToast(moved == 1 ? "Verschoben" : "\(moved) Elemente verschoben")
+            model.showToast(moved == 1 ? "Moved" : "Moved \(moved) items")
         }
         return moved > 0
     }
@@ -486,17 +486,17 @@ struct DetailsPanel: View {
                             if let id = n.thumbBlobId, let vault = model.vault { thumb = await ThumbCache.shared.load(id, vault: vault) } else { thumb = nil }
                         }
                         Text(n.name).font(.system(size: 13, weight: .medium)).textSelection(.enabled)
-                        row("Art", FileTypes.describe(n))
-                        row("Größe", FileTypes.size(n.isFolder ? drive.folderSize(n.id) : n.size))
-                        if n.isFolder { row("Inhalt", "\(drive.children(of: n.id).count) Elemente") }
-                        row("Geändert", n.modified.formatted(date: .abbreviated, time: .shortened))
-                        row("Erstellt", n.created.formatted(date: .abbreviated, time: .shortened))
+                        row("Kind", FileTypes.describe(n))
+                        row("Size", FileTypes.size(n.isFolder ? drive.folderSize(n.id) : n.size))
+                        if n.isFolder { row("Contents", "\(drive.children(of: n.id).count) items") }
+                        row("Modified", n.modified.formatted(date: .abbreviated, time: .shortened))
+                        row("Created", n.created.formatted(date: .abbreviated, time: .shortened))
                     } else if selected.count > 1 {
-                        Text("\(selected.count) Elemente").font(.system(size: 13, weight: .medium))
-                        row("Größe", FileTypes.size(selected.reduce(0) { $0 + ($1.isFolder ? drive.folderSize($1.id) : $1.size) }))
+                        Text("\(selected.count) items").font(.system(size: 13, weight: .medium))
+                        row("Size", FileTypes.size(selected.reduce(0) { $0 + ($1.isFolder ? drive.folderSize($1.id) : $1.size) }))
                     } else {
                         Text(drive.get(model.currentFolderId)?.name ?? AppSection.drive.title).font(.system(size: 13, weight: .medium))
-                        row("Inhalt", "\(nodes.count) Elemente")
+                        row("Contents", "\(nodes.count) items")
                     }
                 }
             }
@@ -520,7 +520,7 @@ struct FolderPicker: View {
     @State private var selected: String = "__root"
 
     var body: some View {
-        SheetLayout(title: "Verschieben nach") {
+        SheetLayout(title: "Move to") {
             List(selection: $selected) {
                 Label(AppSection.drive.title, systemImage: "folder").tag("__root")
                 if let drive = model.drive {
@@ -533,8 +533,8 @@ struct FolderPicker: View {
             }
             .frame(minHeight: 280)
         } buttons: {
-            Button("Abbrechen") { done(nil) }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
-            Button("Hierhin") {
+            Button("Cancel") { done(nil) }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
+            Button("Move Here") {
                 if selected == "__root" { done(Node(parentId: nil, name: "", kind: .folder).withId(nil)) } else { done(model.drive?.get(selected)) }
             }
             .keyboardShortcut(.defaultAction)

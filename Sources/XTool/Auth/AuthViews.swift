@@ -35,12 +35,12 @@ struct SetupView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     XLogoMark(size: 96).frame(maxWidth: .infinity)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Master-Passwort festlegen").font(.system(size: 20, weight: .semibold))
-                        Text("Es verschlüsselt alles in xTool.").font(.system(size: 13)).foregroundStyle(.secondary)
+                        Text("Choose a master password").font(.system(size: 20, weight: .semibold))
+                        Text("It encrypts everything in xTool.").font(.system(size: 13)).foregroundStyle(.secondary)
                     }
                     NewPasswordForm(password: $password, confirmation: $confirmation, onSubmit: create)
                     Toggle(isOn: $understood) {
-                        Text("Ich weiß: Ohne dieses Passwort sind meine Daten für immer verloren. Niemand kann es zurücksetzen.")
+                        Text("I understand: without this password my data is lost forever. Nobody can reset it.")
                             .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
                     .toggleStyle(.checkbox)
@@ -48,14 +48,14 @@ struct SetupView: View {
                     Button(action: create) {
                         HStack(spacing: 8) {
                             if busy { ProgressView().controlSize(.small) }
-                            Text("Tresor erstellen")
+                            Text("Create Vault")
                         }
                         .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.xPrimary)
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canCreate)
-                    Button("Aus einer Sicherung wiederherstellen …") { restore.choose() }
+                    Button("Restore from a Backup …") { restore.choose() }
                         .buttonStyle(.xQuiet)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
@@ -78,7 +78,7 @@ struct SetupView: View {
         busy = true
         error = nil
         Task {
-            do { try await model.createVault(password: password) } catch { self.error = "Der Tresor konnte nicht erstellt werden: \(error.localizedDescription)" }
+            do { try await model.createVault(password: password) } catch { self.error = "The vault could not be created: \(error.localizedDescription)" }
             busy = false
         }
     }
@@ -99,7 +99,7 @@ struct LoginView: View {
             VStack(spacing: 20) {
                 XLogoMark(size: 150)
                 HStack(spacing: 8) {
-                    PasswordField(title: "Passwort", text: $password, revealed: $revealed, onSubmit: unlock)
+                    PasswordField(title: "Password", text: $password, revealed: $revealed, onSubmit: unlock)
                         .disabled(busy)
                     Button(action: unlock) {
                         Group {
@@ -110,7 +110,7 @@ struct LoginView: View {
                     .buttonStyle(.xPrimary)
                     .keyboardShortcut(.defaultAction)
                     .disabled(busy || wait > 0 || password.isEmpty)
-                    .help("Entsperren")
+                    .help("Unlock")
                 }
                 .frame(width: 320)
                 Text(statusText)
@@ -136,7 +136,7 @@ struct LoginView: View {
     }
 
     private var statusText: String {
-        if wait > 0 { return "Falsches Passwort. Nächster Versuch in \(wait) s." }
+        if wait > 0 { return "Wrong password. Next try in \(wait) s." }
         return error ?? model.lockNotice ?? " "
     }
 
@@ -152,7 +152,7 @@ struct LoginView: View {
                 } else {
                     guardState.registerFailure()
                     failures += 1
-                    error = "Falsches Passwort."
+                    error = "Wrong password."
                     password = ""
                 }
             } catch {
@@ -173,7 +173,7 @@ struct RestoreRequest {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [UTType(filenameExtension: "xvault") ?? .data]
         panel.allowsMultipleSelection = false
-        panel.prompt = "Auswählen"
+        panel.prompt = "Choose"
         guard panel.runModal() == .OK, let picked = panel.url else { return }
         password = ""
         url = picked
@@ -185,17 +185,17 @@ struct RestorePrompt: ViewModifier {
     @Binding var request: RestoreRequest
 
     func body(content: Content) -> some View {
-        content.alert("Passwort der Sicherung", isPresented: Binding(get: { request.url != nil }, set: { if !$0 { request.url = nil } })) {
-            SecureField("Passwort", text: $request.password)
-            Button("Wiederherstellen", role: .destructive) {
+        content.alert("Backup Password", isPresented: Binding(get: { request.url != nil }, set: { if !$0 { request.url = nil } })) {
+            SecureField("Password", text: $request.password)
+            Button("Restore", role: .destructive) {
                 if let url = request.url { model.restoreBackup(from: url, password: request.password) }
                 request.url = nil
             }
-            Button("Abbrechen", role: .cancel) { request.url = nil }
+            Button("Cancel", role: .cancel) { request.url = nil }
         } message: {
             Text(model.state == .setup
-                 ? "Die Sicherung wird als dein Tresor eingespielt."
-                 : "Dein aktueller Tresor wird ersetzt. Der bisherige Stand wird aufbewahrt.")
+                 ? "The backup becomes your vault."
+                 : "Your current vault is replaced. The previous state is kept.")
         }
     }
 }

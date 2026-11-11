@@ -12,11 +12,11 @@ struct DocTemplate: Identifiable {
 
 enum DocTemplates {
     static let all: [DocTemplate] = [
-        DocTemplate(id: "blank", name: "Leeres Dokument", description: "Weißes Blatt", defaultName: "Unbenanntes Dokument", symbol: "doc", build: blank),
-        DocTemplate(id: "letter", name: "Brief", description: "DIN 5008", defaultName: "Brief", symbol: "envelope", build: letter),
-        DocTemplate(id: "invoice", name: "Rechnung", description: "Mit Positionen", defaultName: "Rechnung", symbol: "doc.text.below.ecg", build: invoice),
-        DocTemplate(id: "cv", name: "Lebenslauf", description: "Tabellarisch", defaultName: "Lebenslauf", symbol: "person.text.rectangle", build: cv),
-        DocTemplate(id: "minutes", name: "Protokoll", description: "Besprechung", defaultName: "Protokoll", symbol: "list.clipboard", build: minutes),
+        DocTemplate(id: "blank", name: "Blank", description: "Empty page", defaultName: "Untitled Document", symbol: "doc", build: blank),
+        DocTemplate(id: "letter", name: "Letter", description: "Formal letter", defaultName: "Letter", symbol: "envelope", build: letter),
+        DocTemplate(id: "invoice", name: "Invoice", description: "With line items", defaultName: "Invoice", symbol: "doc.text.below.ecg", build: invoice),
+        DocTemplate(id: "cv", name: "Résumé", description: "Clear sections", defaultName: "Résumé", symbol: "person.text.rectangle", build: cv),
+        DocTemplate(id: "minutes", name: "Minutes", description: "Meeting notes", defaultName: "Minutes", symbol: "list.clipboard", build: minutes),
     ]
 
     private static func p(_ text: String, _ style: DocStyle = .normal, _ align: NSTextAlignment = .left) -> NSAttributedString {
@@ -76,61 +76,61 @@ enum DocTemplates {
 
     static func letter() -> NSAttributedString {
         doc([
-            p("Max Mustermann · Musterstraße 1 · 12345 Musterstadt", .small), p(""),
-            p("Firma Beispiel GmbH"), p("Frau Erika Beispiel"), p("Beispielweg 12"), p("54321 Beispielstadt"), p(""),
-            p("Musterstadt, \(today)", .normal, .right), p(""),
-            p("Betreff: Ihr Anliegen", .h3), p(""),
-            p("Sehr geehrte Frau Beispiel,"),
-            p("hier steht der Text Ihres Briefes. Formulieren Sie Ihr Anliegen klar und freundlich."), p(""),
-            p("Mit freundlichen Grüßen"), p(""), p(""), p("Max Mustermann"),
+            p("Alex Sample · 1 Sample Street · Sampletown 12345", .small), p(""),
+            p("Example Company Ltd"), p("Ms Erica Example"), p("12 Example Road"), p("Exampletown 54321"), p(""),
+            p("Sampletown, \(today)", .normal, .right), p(""),
+            p("Subject: Your request", .h3), p(""),
+            p("Dear Ms Example,"),
+            p("This is where the text of your letter goes. State your request clearly and politely."), p(""),
+            p("Kind regards"), p(""), p(""), p("Alex Sample"),
         ])
     }
 
     static func invoice() -> NSAttributedString {
         doc([
-            p("Rechnung", .title),
-            labeled("Rechnungsnummer:", "2026-001"),
-            labeled("Datum:", todayShort),
-            labeled("Kunde:", "Firma Beispiel GmbH, Beispielweg 12, 54321 Beispielstadt"),
+            p("Invoice", .title),
+            labeled("Invoice number:", "2026-001"),
+            labeled("Date:", todayShort),
+            labeled("Customer:", "Example Company Ltd, 12 Example Road, Exampletown 54321"),
             p(""),
-            table(["Pos.", "Beschreibung", "Menge", "Einzelpreis", "Gesamt"],
-                  [["1", "Leistung A", "1", "100,00 €", "100,00 €"], ["2", "Leistung B", "2", "50,00 €", "100,00 €"], ["", "", "", "", ""]],
+            table(["No.", "Description", "Qty", "Unit price", "Total"],
+                  [["1", "Service A", "1", "100.00", "100.00"], ["2", "Service B", "2", "50.00", "100.00"], ["", "", "", "", ""]],
                   widths: [0.6, 3, 0.8, 1.3, 1.3]),
             p(""),
-            p("Zwischensumme: 200,00 €", .normal, .right),
-            p("MwSt. 19 %: 38,00 €", .normal, .right),
-            p("Gesamtbetrag: 238,00 €", .h3, .right), p(""),
-            p("Bitte überweisen Sie den Betrag innerhalb von 14 Tagen auf folgendes Konto:"),
-            p("IBAN: DE00 0000 0000 0000 0000 00 · BIC: XXXXXXXX"),
-            p("Vielen Dank für Ihren Auftrag!", .small),
+            p("Subtotal: 200.00", .normal, .right),
+            p("Tax 10 %: 20.00", .normal, .right),
+            p("Total due: 220.00", .h3, .right), p(""),
+            p("Please transfer the amount within 14 days to the following account:"),
+            p("IBAN: XX00 0000 0000 0000 0000 00 · BIC: XXXXXXXX"),
+            p("Thank you for your business!", .small),
         ])
     }
 
     static func cv() -> NSAttributedString {
         doc([
-            p("Max Mustermann", .title),
-            p("Musterstraße 1 · 12345 Musterstadt · max@beispiel.de · 0123 456789", .small),
-            p("Berufserfahrung", .h2),
-            table(["Zeitraum", "Position"], [["2022 – heute", "Position, Firma, Ort – Aufgaben und Erfolge"], ["2019 – 2022", "Position, Firma, Ort – Aufgaben und Erfolge"]], widths: [1, 3]),
-            p("Ausbildung", .h2),
-            table(["Zeitraum", "Abschluss"], [["2015 – 2019", "Studium / Ausbildung, Institution, Ort"]], widths: [1, 3]),
-            p("Kenntnisse", .h2),
-            p("•  Sprachen: Deutsch (Muttersprache), Englisch (fließend)"),
-            p("•  EDV: Office, …"),
-            p("•  Weitere Fähigkeiten"), p(""),
-            p("Musterstadt, \(todayShort)"),
+            p("Alex Sample", .title),
+            p("1 Sample Street · Sampletown 12345 · alex@example.com · 0123 456789", .small),
+            p("Experience", .h2),
+            table(["Period", "Position"], [["2022 – today", "Position, company, place: tasks and results"], ["2019 – 2022", "Position, company, place: tasks and results"]], widths: [1, 3]),
+            p("Education", .h2),
+            table(["Period", "Qualification"], [["2015 – 2019", "Degree or training, institution, place"]], widths: [1, 3]),
+            p("Skills", .h2),
+            p("•  Languages: English (native), German (fluent)"),
+            p("•  Software: Office, …"),
+            p("•  Other skills"), p(""),
+            p("Sampletown, \(todayShort)"),
         ])
     }
 
     static func minutes() -> NSAttributedString {
         doc([
-            p("Protokoll", .title),
-            labeled("Datum:", todayShort), labeled("Ort:", ""), labeled("Teilnehmende:", ""), labeled("Protokoll:", ""),
-            p("Tagesordnung", .h2),
-            p("1.  Begrüßung"), p("2.  Thema 1"), p("3.  Thema 2"), p("4.  Verschiedenes"),
-            p("Ergebnisse", .h2), p(""),
-            p("Aufgaben", .h2),
-            table(["Aufgabe", "Verantwortlich", "Bis"], [["", "", ""], ["", "", ""]], widths: [3, 1.5, 1]),
+            p("Minutes", .title),
+            labeled("Date:", todayShort), labeled("Place:", ""), labeled("Attendees:", ""), labeled("Minutes by:", ""),
+            p("Agenda", .h2),
+            p("1.  Welcome"), p("2.  Topic 1"), p("3.  Topic 2"), p("4.  Any other business"),
+            p("Decisions", .h2), p(""),
+            p("Action items", .h2),
+            table(["Task", "Owner", "Due"], [["", "", ""], ["", "", ""]], widths: [3, 1.5, 1]),
         ])
     }
 }
@@ -143,7 +143,7 @@ struct TemplatePicker: View {
     let onPick: (DocTemplate?) -> Void
 
     var body: some View {
-        SheetLayout(title: "Neues Dokument", width: 520) {
+        SheetLayout(title: "New Document", width: 520) {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 8) {
                 ForEach(DocTemplates.all) { t in
                     Button { onPick(t) } label: {
@@ -162,7 +162,7 @@ struct TemplatePicker: View {
                 }
             }
         } buttons: {
-            Button("Abbrechen") { onPick(nil) }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
+            Button("Cancel") { onPick(nil) }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
         }
     }
 }

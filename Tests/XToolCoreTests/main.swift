@@ -16,19 +16,19 @@ func expect(_ condition: @autoclosure () throws -> Bool, _ message: @autoclosure
     do {
         if try !condition() { fail(message(), file: file, line: line) }
     } catch {
-        fail("Fehler: \(error) \(message())", file: file, line: line)
+        fail("Error: \(error) \(message())", file: file, line: line)
     }
 }
 
 func expectThrows<T>(_ body: () throws -> T, file: StaticString = #filePath, line: UInt = #line) {
-    if (try? body()) != nil { fail("Fehler erwartet", file: file, line: line) }
+    if (try? body()) != nil { fail("Expected an error", file: file, line: line) }
 }
 
 struct MissingValue: Error {}
 
 func require<T>(_ value: T?, file: StaticString = #filePath, line: UInt = #line) throws -> T {
     guard let value else {
-        fail("Wert fehlt", file: file, line: line)
+        fail("Missing value", file: file, line: line)
         throw MissingValue()
     }
     return value
@@ -38,7 +38,7 @@ func run(_ name: String, _ body: () throws -> Void) {
     currentTest = name
     let before = failures
     let start = Date()
-    do { try body() } catch { fail("Abbruch: \(error)", file: #filePath, line: #line) }
+    do { try body() } catch { fail("Stopped: \(error)", file: #filePath, line: #line) }
     let ms = Int(Date().timeIntervalSince(start) * 1000)
     print("\(failures == before ? "✓" : "✗") \(name) (\(ms) ms)")
 }
@@ -71,6 +71,13 @@ run("WriterDocxTests.oldPatchedFilesCanBeRepaired") { try WriterDocxTests().oldP
 run("KeyProtectionTests.oldVaultIsUpgradedAndStaysReadable") { try KeyProtectionTests().oldVaultIsUpgradedAndStaysReadable() }
 run("KeyProtectionTests.keyStaysUsableForRunningWorkAfterLocking") { try KeyProtectionTests().keyStaysUsableForRunningWorkAfterLocking() }
 run("KeyProtectionTests.olderSettingsGetDefaults") { try KeyProtectionTests().olderSettingsGetDefaults() }
+run("MetadataTests.photosLoseLocationCameraAndNames") { try MetadataTests().photosLoseLocationCameraAndNames() }
+run("MetadataTests.pdfLosesAuthorAndHiddenXMP") { try MetadataTests().pdfLosesAuthorAndHiddenXMP() }
+run("MetadataTests.protectedPdfIsLeftAlone") { try MetadataTests().protectedPdfIsLeftAlone() }
+run("MetadataTests.officeLosesAuthorsAndEditors") { try MetadataTests().officeLosesAuthorsAndEditors() }
+run("MetadataTests.realWordFileStillOpensWithoutAuthor") { try MetadataTests().realWordFileStillOpensWithoutAuthor() }
+run("MetadataTests.pdfTextStaysSelectable") { try MetadataTests().pdfTextStaysSelectable() }
+run("MetadataTests.otherTypesAreUntouched") { try MetadataTests().otherTypesAreUntouched() }
 
-print(failures == 0 ? "\nAlle Tests bestanden." : "\n\(failures) Fehler.")
+print(failures == 0 ? "\nAll tests passed." : "\n\(failures) failed.")
 exit(failures == 0 ? 0 : 1)

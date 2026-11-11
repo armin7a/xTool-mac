@@ -68,7 +68,7 @@ public enum BlobCipher {
                 done = isFinal
             }
         }
-        guard try read(1).isEmpty else { throw XToolCryptoError.corrupted("fremde Daten") }
+        guard try read(1).isEmpty else { throw XToolCryptoError.corrupted("unexpected data") }
         return total
     }
 
@@ -109,10 +109,10 @@ public enum BlobCipher {
         var total: Int64 = 0
         var position = UInt64(headerSize)
         while true {
-            guard let rec = try handle.read(upToCount: 5), rec.count == 5 else { throw XToolCryptoError.corrupted("unvollständig") }
+            guard let rec = try handle.read(upToCount: 5), rec.count == 5 else { throw XToolCryptoError.corrupted("incomplete") }
             let bytes = [UInt8](rec)
             let length = Int(int32(bytes, 1))
-            guard length >= 0 else { throw XToolCryptoError.corrupted("Länge") }
+            guard length >= 0 else { throw XToolCryptoError.corrupted("length") }
             total += Int64(length)
             position += UInt64(5 + length + Aead.tagSize)
             if bytes[0] == 1 { return total }
@@ -159,7 +159,7 @@ public enum BlobCipher {
         guard head.count == headerSize, Data(head[0..<4]) == magic else { throw XToolCryptoError.corrupted("Header") }
         let salt = Data(head[4..<(4 + saltSize)])
         let chunkSize = Int(int32(head, 4 + saltSize))
-        guard chunkSize > 0, chunkSize <= maxChunkSize else { throw XToolCryptoError.corrupted("Blockgröße") }
+        guard chunkSize > 0, chunkSize <= maxChunkSize else { throw XToolCryptoError.corrupted("chunk size") }
         return (blobKey(masterKey: masterKey, salt: salt, blobId: blobId), chunkSize)
     }
 
@@ -175,12 +175,12 @@ public enum BlobCipher {
 
     private static func openRecord(read: Reader, key: SymmetricKey, blobId: String, index: Int64, chunkSize: Int) throws -> (Data, Bool) {
         let rec = [UInt8](try readFull(read, 5))
-        guard rec.count == 5 else { throw XToolCryptoError.corrupted("unvollständig") }
+        guard rec.count == 5 else { throw XToolCryptoError.corrupted("incomplete") }
         let isFinal = rec[0] == 1
         let length = Int(int32(rec, 1))
-        guard length >= 0, length <= chunkSize else { throw XToolCryptoError.corrupted("unvollständig") }
+        guard length >= 0, length <= chunkSize else { throw XToolCryptoError.corrupted("incomplete") }
         let body = try readFull(read, length + Aead.tagSize)
-        guard body.count == length + Aead.tagSize else { throw XToolCryptoError.corrupted("unvollständig") }
+        guard body.count == length + Aead.tagSize else { throw XToolCryptoError.corrupted("incomplete") }
         let split = body.startIndex + length
         do {
             let box = try AES.GCM.SealedBox(nonce: nonce(index), ciphertext: body[body.startIndex..<split], tag: body[split..<body.endIndex])

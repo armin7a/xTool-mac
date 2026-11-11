@@ -10,14 +10,14 @@ struct VersionsView: View {
     var body: some View {
         let _ = model.revision
         let node = model.drive?.get(nodeId)
-        SheetLayout(title: "Versionen von „\(node?.name ?? "")“", width: 480) {
+        SheetLayout(title: "Versions of “\(node?.name ?? "")”", width: 480) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("xTool behält beim Speichern frühere Stände: höchstens alle 10 Minuten einen, bis zu \(Drive.maxVersions).")
+                Text("xTool keeps earlier versions when you save: at most one every 10 minutes, up to \(Drive.maxVersions).")
                     .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 if let node {
                     ScrollView {
                         VStack(spacing: 2) {
-                            row(title: "Aktueller Stand", date: node.modified, size: node.size, version: nil)
+                            row(title: "Current version", date: node.modified, size: node.size, version: nil)
                             let versions = (node.versions ?? []).sorted { $0.saved > $1.saved }
                             ForEach(versions, id: \.blobId) { v in row(title: nil, date: v.saved, size: v.size, version: v) }
                         }
@@ -26,7 +26,7 @@ struct VersionsView: View {
                 }
             }
         } buttons: {
-            Button("Schließen") { done() }.keyboardShortcut(.defaultAction).buttonStyle(.xPrimary)
+            Button("Close") { done() }.keyboardShortcut(.defaultAction).buttonStyle(.xPrimary)
         }
     }
 
@@ -38,8 +38,8 @@ struct VersionsView: View {
             }
             Spacer()
             if let version {
-                Button("Wiederherstellen") { restore(version) }.buttonStyle(.xQuiet)
-                IconButton(symbol: "trash", help: "Diese Version endgültig löschen") {
+                Button("Restore") { restore(version) }.buttonStyle(.xQuiet)
+                IconButton(symbol: "trash", help: "Delete this version permanently") {
                     model.drive?.deleteVersion(nodeId, version)
                     model.save()
                 }
@@ -59,17 +59,17 @@ struct VersionsView: View {
             guard let current = model.drive?.get(nodeId)?.versions?.first(where: { $0.blobId == version.blobId }) else { return }
             model.drive?.restoreVersion(nodeId, current)
             model.save()
-            model.showToast("Version vom \(version.saved.formatted(date: .numeric, time: .shortened)) wiederhergestellt")
+            model.showToast("Restored the version from \(version.saved.formatted(date: .numeric, time: .shortened))")
             if open != nil, let node = model.drive?.get(nodeId) { Opener.open(node, model: model) }
         }
     }
 
     private func friendly(_ date: Date) -> String {
         let age = Date().timeIntervalSince(date)
-        if age < 60 { return "Gerade eben" }
-        if age < 3600 { return "Vor \(Int(age / 60)) Minuten" }
-        if Calendar.current.isDateInToday(date) { return "Heute, \(date.formatted(date: .omitted, time: .shortened)) Uhr" }
-        if Calendar.current.isDateInYesterday(date) { return "Gestern, \(date.formatted(date: .omitted, time: .shortened)) Uhr" }
+        if age < 60 { return "Just now" }
+        if age < 3600 { return Int(age / 60) == 1 ? "1 minute ago" : "\(Int(age / 60)) minutes ago" }
+        if Calendar.current.isDateInToday(date) { return "Today, \(date.formatted(date: .omitted, time: .shortened))" }
+        if Calendar.current.isDateInYesterday(date) { return "Yesterday, \(date.formatted(date: .omitted, time: .shortened))" }
         return date.formatted(date: .complete, time: .omitted)
     }
 }

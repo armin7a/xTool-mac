@@ -8,9 +8,9 @@ public enum XToolCryptoError: Error, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .corrupted(let what): return "Daten sind beschädigt (\(what))."
-        case .wrongKey: return "Falscher Schlüssel oder manipulierte Daten."
-        case .unsupportedKdf(let what): return "Nicht unterstütztes Tresor-Format: \(what)"
+        case .corrupted(let what): return "The data is damaged (\(what))."
+        case .wrongKey: return "Wrong key, or the data was tampered with."
+        case .unsupportedKdf(let what): return "Unsupported vault format: \(what)"
         }
     }
 }
@@ -28,7 +28,7 @@ public enum Aead {
     }
 
     public static func open(key: Data, sealed: Data, aad: Data) throws -> Data {
-        guard sealed.count >= nonceSize + tagSize else { throw XToolCryptoError.corrupted("zu kurz") }
+        guard sealed.count >= nonceSize + tagSize else { throw XToolCryptoError.corrupted("too short") }
         do {
             let box = try AES.GCM.SealedBox(combined: sealed)
             return try AES.GCM.open(box, using: SymmetricKey(data: key), authenticating: aad)

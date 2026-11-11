@@ -1,53 +1,57 @@
-# Tresor-Format (Version 1)
+# Vault format (version 1)
 
-Mit dieser Beschreibung lässt sich ein Tresor auch ohne xTool entschlüsseln.
+With this description a vault can be decrypted without xTool.
 
-Ort: `~/Library/Containers/ch.xtool.app/Data/Library/Application Support/xTool/Vault`
+Location: `~/Library/Containers/ch.xtool.app/Data/Library/Application Support/xTool/Vault`
 
 ```
-vault.json            Schlüsselparameter und verpackter Hauptschlüssel (Klartext-JSON)
-index.bin             verschlüsselter Index
-index.bak             vorheriger Stand des Index
-attempts-mac.json     Zähler für Fehlversuche, nicht sicherheitsrelevant
-blobs/ab/abcd…        verschlüsselte Dateiinhalte (Name = Blob-ID, die ersten zwei Zeichen als Ordner)
+vault.json            key parameters and the wrapped master key (plain JSON)
+index.bin             encrypted index
+index.bak             previous state of the index
+attempts-mac.json     counter for failed attempts, not security relevant
+blobs/ab/abcd…        encrypted file contents (name = blob ID, first two characters as folder)
 ```
 
-## Hauptschlüssel
+## Master key
 
-`vault.json` enthält `Version`, `Kdf` ("argon2id"), `MemoryKiB`, `Iterations`, `Parallelism`, `Salt` (Base64, 16 Byte), `WrappedKey` (Base64), `Created`.
+`vault.json` contains `Version`, `Kdf` ("argon2id"), `MemoryKiB`, `Iterations`, `Parallelism`, `Salt` (Base64, 16 bytes), `WrappedKey` (Base64), `Created`.
 
-1. Passwort als Unicode NFC normalisieren und als UTF-8 kodieren.
-2. Argon2id (Version 1.3) mit den Werten aus der Datei, Ausgabe 32 Byte: der Schlüssel `KEK`.
-3. `WrappedKey` mit AES-256-GCM und `KEK` öffnen, AAD = `xtool-master-key-v1`. Ergebnis: der 32 Byte lange Hauptschlüssel.
+1. Normalize the password to Unicode NFC and encode it as UTF-8.
+2. Argon2id (version 1.3) with the values from the file, 32 bytes of output: the key `KEK`.
+3. Open `WrappedKey` with AES-256-GCM and `KEK`, AAD = `xtool-master-key-v1`. The result is the 32-byte master key.
 
-Versiegelte Werte haben den Aufbau `Nonce (12) | Chiffretext | Tag (16)`.
+Sealed values are laid out as `nonce (12) | ciphertext | tag (16)`.
+
+New vaults use 1 GiB of memory, 3 iterations and 1 lane. Older vaults are moved to these values the next time they are unlocked.
 
 ## Index
 
-`index.bin` wird wie oben mit dem Hauptschlüssel geöffnet, AAD = `xtool-index-v1`. Inhalt ist JSON:
+`index.bin` is opened like above with the master key, AAD = `xtool-index-v1`. Its content is JSON:
 
 - `Version`, `Nodes`, `Notes`, `Boards`, `Settings`
-- `Nodes[]`: `Id`, `ParentId` (null = oberste Ebene), `Name`, `Kind` (0 = Ordner, 1 = Datei), `Size`, `BlobId`, `ThumbBlobId`, `Created`, `Modified`, `Accessed`, `DeletedAt`, `Versions[]` (`BlobId`, `Size`, `Saved`)
-- Zeitangaben sind ISO-8601-Texte.
+- `Nodes[]`: `Id`, `ParentId` (null = top level), `Name`, `Kind` (0 = folder, 1 = file), `Size`, `BlobId`, `ThumbBlobId`, `Created`, `Modified`, `Accessed`, `DeletedAt`, `Versions[]` (`BlobId`, `Size`, `Saved`)
+- Times are ISO 8601 strings.
 
-## Dateien (Blobs)
+## Files (blobs)
 
 ```
-"XTB1" | Salt (32) | Blockgröße (int32 LE) | Blöcke …
-Block: Letzter (1 Byte: 1 = letzter Block) | Länge (int32 LE) | Chiffretext | Tag (16)
+"XTB1" | salt (32) | chunk size (int32 LE) | chunks …
+chunk: final (1 byte: 1 = last chunk) | length (int32 LE) | ciphertext | tag (16)
 ```
 
-- Blob-Schlüssel: HKDF-SHA256(Hauptschlüssel, Salt, Info = `xtool-blob-v1:` + Blob-ID), 32 Byte.
-- Jeder Block: AES-256-GCM.
-  - Nonce: Blocknummer ab 0 als int64 LE, danach 4 Null-Bytes.
-  - AAD: Blob-ID (UTF-8) | Blocknummer (int64 LE) | Letzter (1 Byte).
-- Eine leere Datei ist genau ein letzter Block der Länge 0.
-- Eine Datei ist nur vollständig, wenn ihr letzter Block gelesen wurde und danach nichts mehr folgt.
+- Blob key: HKDF-SHA256(master key, salt, info = `xtool-blob-v1:` + blob ID), 32 bytes.
+- Every chunk: AES-256-GCM.
+  - Nonce: chunk number from 0 as int64 LE, followed by 4 zero bytes.
+  - AAD: blob ID (UTF-8) | chunk number (int64 LE) | final (1 byte).
+- An empty file is exactly one final chunk of length 0.
+- A file is only complete when its final chunk has been read and nothing follows it.
 
-## Sicherung (.xvault)
+## Backup (.xvault)
 
-Eine ZIP-Datei mit `vault.json`, `index.bin`, `index.bak` und `blobs/` unverändert. Die Inhalte sind gespeichert, nicht komprimiert (bei Bedarf Zip64).
+A ZIP file with `vault.json`, `index.bin`, `index.bak` and `blobs/` unchanged. The entries are stored, not compressed (Zip64 if needed).
 
-## Passwort ändern
+## Changing the password
 
-Nur `vault.json` wird neu geschrieben, der Hauptschlüssel bleibt gleich. Das hält den Wechsel schnell. Es bedeutet aber: Wer eine alte `vault.json` oder Sicherung und das alte Passwort hat, kann auch neuere Daten entschlüsseln, falls er an die verschlüsselten Dateien kommt.
+Only `vault.json` is rewritten; the master key stays the same. That keeps the change fast. It also means: whoever has an
+old `vault.json` or backup and the old password can decrypt newer data too, if they get hold of the encrypted files.
+See [THREAT_MODEL.md](THREAT_MODEL.md#changing-the-password).

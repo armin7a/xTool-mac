@@ -37,15 +37,15 @@ struct NotesView: View {
 
         VStack(spacing: 0) {
             PageHeader(title: AppSection.notes.title) {
-                IconButton(symbol: "square.and.pencil", help: "Neue Notiz") { newNote() }
+                IconButton(symbol: "square.and.pencil", help: "New Note") { newNote() }
             }
             if notes.isEmpty {
                 if search.isEmpty {
-                    EmptyState(symbol: "note.text", title: "Noch keine Notizen", message: "Halte Gedanken, Listen und Ideen fest.") {
-                        Button("Neue Notiz") { newNote() }.buttonStyle(.xPrimary)
+                    EmptyState(symbol: "note.text", title: "No notes yet", message: "Write down thoughts, lists and ideas.") {
+                        Button("New Note") { newNote() }.buttonStyle(.xPrimary)
                     }
                 } else {
-                    EmptyState(symbol: "magnifyingglass", title: "Nichts gefunden", message: "Für „\(search)“ gibt es keine Notiz.")
+                    EmptyState(symbol: "magnifyingglass", title: "Nothing found", message: "No note matches “\(search)”.")
                 }
             } else {
                 ScrollView {
@@ -60,7 +60,7 @@ struct NotesView: View {
                 }
             }
         }
-        .searchable(text: $search, placement: .toolbar, prompt: "Suchen")
+        .searchable(text: $search, placement: .toolbar, prompt: "Search")
         .sheet(item: $editing) { note in
             NoteEditor(note: note, isNew: isNew) { result in
                 editing = nil
@@ -94,7 +94,7 @@ struct NotesView: View {
                         Spacer()
                         Button { togglePin(note) } label: { Image(systemName: note.pinned ? "pin.fill" : "pin").font(.system(size: 11)).foregroundStyle(note.pinned ? XColor.accent : Color.secondary) }
                             .buttonStyle(.plain)
-                            .help(note.pinned ? "Lösen" : "Anheften")
+                            .help(note.pinned ? "Unpin" : "Pin")
                     }
                     Text(note.text).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(10)
                     Text(FileTypes.date(note.modified)).font(.caption2).foregroundStyle(.tertiary).padding(.top, 4)
@@ -125,7 +125,7 @@ struct NoteEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            TextField("Titel", text: $note.title).font(.system(size: 15, weight: .semibold)).textFieldStyle(.plain)
+            TextField("Title", text: $note.title).font(.system(size: 15, weight: .semibold)).textFieldStyle(.plain)
             PrivateTextEditor(text: $note.text)
                 .frame(minHeight: 240)
             HStack(spacing: 8) {
@@ -139,11 +139,11 @@ struct NoteEditor: View {
             }
             HStack {
                 if !isNew {
-                    IconButton(symbol: "trash", help: "Notiz löschen") { done(.delete(note.id)) }
+                    IconButton(symbol: "trash", help: "Delete Note") { done(.delete(note.id)) }
                 }
                 Spacer()
-                Button("Abbrechen") { done(.cancel) }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
-                Button("Speichern") {
+                Button("Cancel") { done(.cancel) }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
+                Button("Save") {
                     note.modified = Date()
                     note.title = note.title.trimmingCharacters(in: .whitespaces)
                     done(.save(note))

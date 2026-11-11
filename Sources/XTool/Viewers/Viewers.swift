@@ -71,7 +71,7 @@ struct ImageViewerScreen: View {
                     .onEnded { _ in baseZoom = zoom })
                 .onTapGesture(count: 2) { withAnimation { zoom = zoom > 1.01 ? 1 : 2; baseZoom = zoom } }
             } else {
-                Text("Dieses Bildformat kann nicht angezeigt werden.").foregroundStyle(.white.opacity(0.7))
+                Text("This image format cannot be shown.").foregroundStyle(.white.opacity(0.7))
             }
             HStack {
                 navButton("chevron.left") { step(-1) }
@@ -158,9 +158,9 @@ struct TextEditorScreen: View {
             if dirty { try drive.updateContent(node.id, Data(text.utf8)) }
             model.save()
             dirty = false
-            if announce { model.showToast("Gespeichert") }
+            if announce { model.showToast("Saved") }
         } catch {
-            model.showToast("Speichern fehlgeschlagen", isError: true)
+            model.showToast("Saving failed", isError: true)
         }
     }
 }
@@ -183,19 +183,19 @@ struct FileInfoScreen: View {
                 Text("\(FileTypes.describe(node)) · \(FileTypes.size(node.size))").font(.system(size: 12)).foregroundStyle(.secondary)
                 Text(message(node: node, tooLarge: tooLarge))
                     .font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 340).padding(.top, 2)
-                Button("Exportieren …") { model.exportWithPanel([node.id]) }.buttonStyle(.xPrimary).padding(.top, 10)
+                Button("Export …") { model.exportWithPanel([node.id]) }.buttonStyle(.xPrimary).padding(.top, 10)
             }
             .padding(20)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            EmptyState(symbol: "doc", title: "Datei nicht verfügbar", message: "Sie wurde gelöscht.")
+            EmptyState(symbol: "doc", title: "File not available", message: "It was deleted.")
         }
     }
 
     private func message(node: Node, tooLarge: Bool) -> String {
-        if tooLarge { return "Zu groß für die Vorschau. Die Datei ist sicher gespeichert. Zum Öffnen exportierst du sie." }
-        if node.ext == "doc" { return "Das alte Word-Format wird nicht angezeigt. Zum Öffnen exportierst du die Datei." }
-        return "Für diesen Dateityp gibt es keine Vorschau. Zum Öffnen exportierst du die Datei."
+        if tooLarge { return "Too large for a preview. The file is stored safely. Export it to open it." }
+        if node.ext == "doc" { return "The old Word format cannot be shown. Export the file to open it." }
+        return "There is no preview for this file type. Export the file to open it."
     }
 }
 
@@ -224,7 +224,7 @@ struct OfficePreviewScreen: View {
                         VStack(alignment: .leading, spacing: 14) {
                             ForEach(slides.indices, id: \.self) { i in
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Text("Folie \(i + 1)").font(.caption).foregroundStyle(.secondary)
+                                    Text("Slide \(i + 1)").font(.caption).foregroundStyle(.secondary)
                                     ForEach(Array(slides[i].enumerated()), id: \.offset) { j, line in
                                         Text(line).font(j == 0 ? .title3.weight(.semibold) : .body)
                                     }
@@ -291,7 +291,7 @@ enum OfficeReader {
         for i in 1...max(1, names.count) {
             guard let xml = files["xl/worksheets/sheet\(i).xml"] else { continue }
             let rows = XMLText.sheetRows(xml, shared: shared)
-            sheets.append(Sheet(name: i - 1 < names.count ? names[i - 1] : "Tabelle \(i)", rows: rows))
+            sheets.append(Sheet(name: i - 1 < names.count ? names[i - 1] : "Sheet \(i)", rows: rows))
         }
         return sheets
     }
@@ -374,7 +374,7 @@ final class XMLText: NSObject, XMLParserDelegate {
             case "c":
                 var v = value
                 if type == "s", let i = Int(value), i < shared.count { v = shared[i] }
-                if type == "b" { v = value == "1" ? "WAHR" : "FALSCH" }
+                if type == "b" { v = value == "1" ? "TRUE" : "FALSE" }
                 if col < 60 { row[col] = v }
             case "row":
                 let n = (row.keys.max() ?? -1) + 1

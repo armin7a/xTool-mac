@@ -35,21 +35,21 @@ struct MainView: View {
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Menu {
-                    Button { model.importFiles(Panels.chooseFilesToImport(), into: model.targetFolderId) } label: { Label("Dateien hinzufügen …", systemImage: "plus") }
-                    Button { newFolderName = "Neuer Ordner" } label: { Label("Ordner", systemImage: "folder") }
+                    Button { model.importFiles(Panels.chooseFilesToImport(), into: model.targetFolderId) } label: { Label("Add Files …", systemImage: "plus") }
+                    Button { newFolderName = "New Folder" } label: { Label("Folder", systemImage: "folder") }
                     Divider()
-                    Button { showTemplates = true } label: { Label("Dokument", systemImage: "doc.text") }
-                    Button(action: newTextFile) { Label("Textdatei", systemImage: "doc.plaintext") }
+                    Button { showTemplates = true } label: { Label("Document", systemImage: "doc.text") }
+                    Button(action: newTextFile) { Label("Text File", systemImage: "doc.plaintext") }
                     Button {
                         model.show(.notes)
                         model.pendingNewNote = true
-                    } label: { Label("Notiz", systemImage: "note.text") }
+                    } label: { Label("Note", systemImage: "note.text") }
                 } label: {
-                    Label("Neu", systemImage: "plus")
+                    Label("New", systemImage: "plus")
                 }
                 .menuIndicator(.hidden)
                 .tint(.primary)
-                .help("Neu")
+                .help("New")
             }
         }
         .sheet(isPresented: $showTemplates) {
@@ -61,9 +61,9 @@ struct MainView: View {
                 }
             }
         }
-        .alert("Neuer Ordner", isPresented: Binding(get: { newFolderName != nil }, set: { if !$0 { newFolderName = nil } })) {
+        .alert("New Folder", isPresented: Binding(get: { newFolderName != nil }, set: { if !$0 { newFolderName = nil } })) {
             TextField("Name", text: Binding(get: { newFolderName ?? "" }, set: { newFolderName = $0 }))
-            Button("Erstellen") {
+            Button("Create") {
                 if let name = newFolderName, let drive = model.drive {
                     let parent = model.targetFolderId
                     drive.createFolder(in: parent, name: name)
@@ -72,7 +72,7 @@ struct MainView: View {
                 }
                 newFolderName = nil
             }
-            Button("Abbrechen", role: .cancel) { newFolderName = nil }
+            Button("Cancel", role: .cancel) { newFolderName = nil }
         }
         .task {
             #if DEBUG
@@ -83,7 +83,7 @@ struct MainView: View {
 
     private func newTextFile() {
         guard let drive = model.drive else { return }
-        if let node = try? drive.addFile(in: model.targetFolderId, name: "Neue Textdatei.txt", content: Data()) {
+        if let node = try? drive.addFile(in: model.targetFolderId, name: "New Text File.txt", content: Data()) {
             model.save()
             model.openTab(DocTab(id: node.id, kind: .text, title: node.name, nodeId: node.id))
         }
@@ -146,7 +146,7 @@ struct TabStrip: View {
                     Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).foregroundStyle(.secondary).frame(width: 14, height: 14).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("Tab schließen (⌘W)")
+                .help("Close Tab (⌘W)")
             }
         }
         .font(.system(size: 12))
@@ -197,9 +197,9 @@ struct Sidebar: View {
                         .padding(.horizontal, 8)
                 }
                 HStack(spacing: 2) {
-                    IconButton(symbol: "lock", help: "Sperren (⌃⌘L)") { model.lock() }
+                    IconButton(symbol: "lock", help: "Lock (⌃⌘L)") { model.lock() }
                     Spacer()
-                    IconButton(symbol: "gearshape", help: "Einstellungen (⌘,)") { model.show(.settings) }
+                    IconButton(symbol: "gearshape", help: "Settings (⌘,)") { model.show(.settings) }
                 }
                 .overlay(alignment: .topTrailing) {
                     if model.passwordNeedsUpgrade { Circle().fill(XColor.warning).frame(width: 6, height: 6).offset(x: -4, y: 4) }

@@ -34,12 +34,12 @@ enum AppSection: String, Hashable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .drive: return "Dateien"
-        case .recent: return "Zuletzt"
-        case .notes: return "Notizen"
-        case .todo: return "Aufgaben"
-        case .trash: return "Papierkorb"
-        case .settings: return "Einstellungen"
+        case .drive: return "Files"
+        case .recent: return "Recent"
+        case .notes: return "Notes"
+        case .todo: return "Tasks"
+        case .trash: return "Trash"
+        case .settings: return "Settings"
         }
     }
 
@@ -156,13 +156,13 @@ final class AppModel {
         let recovered = drive.recoverLostContent()
         if recovered > 0 {
             try? vault.saveIndex()
-            showToast("\(recovered) verlorene Dokument-Fassung(en) wiederhergestellt")
+            showToast(recovered == 1 ? "Recovered 1 lost document version" : "Recovered \(recovered) lost document versions")
         }
         if vault.loadedFromIndexBackup {
-            alert = AlertInfo(title: "Tresor-Index repariert",
-                              message: "Der Index war beschädigt. xTool hat die Kopie des vorherigen Speicherstands geladen. Die allerletzten Änderungen können fehlen.")
+            alert = AlertInfo(title: "Vault index repaired",
+                              message: "The index was damaged. xTool loaded the copy from the previous save. Your very latest changes may be missing.")
         } else if passwordNeedsUpgrade {
-            showToast("Dein Passwort ist schwach. Du kannst es in den Einstellungen ändern.")
+            showToast("Your password is weak. You can change it in Settings.")
         }
         Theme.apply(vault.index.settings.theme)
         #if DEBUG
@@ -198,15 +198,15 @@ final class AppModel {
             // The user can react: stay open rather than lose changes.
             // Sleep or a locked screen can't wait: lock anyway and say so afterwards.
             if reason == .user {
-                alert = AlertInfo(title: "Speichern fehlgeschlagen",
-                                  message: "Deine letzten Änderungen konnten nicht geschrieben werden, deshalb bleibt der Tresor offen. Bitte prüfe den freien Speicher.\n\n\(error.localizedDescription)")
+                alert = AlertInfo(title: "Saving failed",
+                                  message: "Your latest changes could not be written, so the vault stays open. Please check your free disk space.\n\n\(error.localizedDescription)")
                 return
             }
-            lockNotice = "Die letzten Änderungen konnten beim Sperren nicht gespeichert werden."
+            lockNotice = "Your latest changes could not be saved while locking."
         }
         if transfer?.cancellable == true {
             cancelToken?.cancel()
-            lockNotice = lockNotice ?? "Die laufende Übertragung wurde beim Sperren abgebrochen. Fertige Dateien sind gespeichert."
+            lockNotice = lockNotice ?? "The running transfer was cancelled when the vault locked. Finished files are saved."
         }
         vault.waitForWrites()
         vault.lock()
@@ -240,7 +240,7 @@ final class AppModel {
             guard !Task.isCancelled, let vault = self?.vault, vault.isUnlocked else { return }
             vault.saveIndexInBackground { error in
                 if error != nil {
-                    Task { @MainActor in self?.showToast("Speichern fehlgeschlagen. Bitte freien Speicher prüfen.", isError: true) }
+                    Task { @MainActor in self?.showToast("Saving failed. Please check your free disk space.", isError: true) }
                 }
             }
         }

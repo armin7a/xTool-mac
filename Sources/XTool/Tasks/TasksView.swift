@@ -36,14 +36,14 @@ struct TasksView: View {
                     .padding(.bottom, 14)
                 }
             } else {
-                EmptyState(symbol: "checklist", title: "Kein Board", message: "Lege oben ein neues Board an.")
+                EmptyState(symbol: "checklist", title: "No board", message: "Create a new board at the top.")
             }
         }
-        .searchable(text: $filter, placement: .toolbar, prompt: "Suchen")
+        .searchable(text: $filter, placement: .toolbar, prompt: "Search")
         .toolbar {
             ToolbarItemGroup {
-                Button { nameInput = "Neue Spalte"; newColumn = true } label: { Label("Spalte", systemImage: "rectangle.split.3x1") }
-                    .help("Neue Spalte")
+                Button { nameInput = "New Column"; newColumn = true } label: { Label("Column", systemImage: "rectangle.split.3x1") }
+                    .help("New Column")
                 Menu {
                     if boards.count > 1 {
                         Picker("Board", selection: Binding(get: { boardIndex.map { boards[$0].id } ?? "" }, set: { id in
@@ -54,10 +54,10 @@ struct TasksView: View {
                         }
                         .pickerStyle(.inline)
                     }
-                    Button("Neues Board …") { nameInput = "Neues Board"; newBoard = true }
-                    Button("Board umbenennen …") { nameInput = boardIndex.map { boards[$0].name } ?? ""; renameBoard = true }
+                    Button("New Board …") { nameInput = "New Board"; newBoard = true }
+                    Button("Rename Board …") { nameInput = boardIndex.map { boards[$0].name } ?? ""; renameBoard = true }
                     if boards.count > 1 {
-                        Button("Board löschen", role: .destructive) {
+                        Button("Delete Board", role: .destructive) {
                             if let bi = boardIndex { model.vault?.index.boards.remove(at: bi); model.vault?.index.settings.lastBoardId = nil; model.save() }
                         }
                     }
@@ -67,25 +67,25 @@ struct TasksView: View {
                 .help("Boards")
             }
         }
-        .alert("Neues Board", isPresented: $newBoard) {
+        .alert("New Board", isPresented: $newBoard) {
             TextField("Name", text: $nameInput)
-            Button("Erstellen") {
+            Button("Create") {
                 let b = Board.makeDefault(nameInput.isEmpty ? "Board" : nameInput)
                 model.vault?.index.boards.append(b)
                 model.vault?.index.settings.lastBoardId = b.id
                 model.save()
             }
-            Button("Abbrechen", role: .cancel) {}
+            Button("Cancel", role: .cancel) {}
         }
-        .alert("Board umbenennen", isPresented: $renameBoard) {
+        .alert("Rename Board", isPresented: $renameBoard) {
             TextField("Name", text: $nameInput)
-            Button("Umbenennen") { if let bi = boardIndex { model.vault?.index.boards[bi].name = nameInput; model.save() } }
-            Button("Abbrechen", role: .cancel) {}
+            Button("Rename") { if let bi = boardIndex { model.vault?.index.boards[bi].name = nameInput; model.save() } }
+            Button("Cancel", role: .cancel) {}
         }
-        .alert("Neue Spalte", isPresented: $newColumn) {
+        .alert("New Column", isPresented: $newColumn) {
             TextField("Name", text: $nameInput)
-            Button("Hinzufügen") { if let bi = boardIndex { model.vault?.index.boards[bi].columns.append(BoardColumn(name: nameInput)); model.save() } }
-            Button("Abbrechen", role: .cancel) {}
+            Button("Add") { if let bi = boardIndex { model.vault?.index.boards[bi].columns.append(BoardColumn(name: nameInput)); model.save() } }
+            Button("Cancel", role: .cancel) {}
         }
         .sheet(item: $editing) { ref in
             if let bi = boardIndex {
@@ -103,9 +103,9 @@ struct TasksView: View {
         let due = cards.filter { !$0.0.isDone && ($0.1.due.map { Calendar.current.startOfDay(for: $0) <= Calendar.current.startOfDay(for: Date()) } ?? false) }.count
         let done = cards.filter { $0.0.isDone }.count
         return HStack(spacing: 12) {
-            chip("\(open) offen", .secondary)
-            if due > 0 { chip("\(due) fällig", XColor.warning) }
-            chip("\(done) erledigt", .secondary)
+            chip("\(open) open", .secondary)
+            if due > 0 { chip("\(due) due", XColor.warning) }
+            chip("\(done) done", .secondary)
         }
     }
 
@@ -173,12 +173,12 @@ private struct ColumnView: View {
                 Text("\(column.cards.count)").font(.system(size: 11)).foregroundStyle(.tertiary)
                 Spacer()
                 Menu {
-                    Button("Umbenennen …") { nameInput = column.name; renaming = true }
-                    Toggle("Zählt als erledigt", isOn: Binding(get: { column.isDone }, set: { v in updateColumn { $0.isDone = v } }))
-                    Button("Nach links") { shiftColumn(-1) }
-                    Button("Nach rechts") { shiftColumn(1) }
+                    Button("Rename …") { nameInput = column.name; renaming = true }
+                    Toggle("Counts as done", isOn: Binding(get: { column.isDone }, set: { v in updateColumn { $0.isDone = v } }))
+                    Button("Move Left") { shiftColumn(-1) }
+                    Button("Move Right") { shiftColumn(1) }
                     Divider()
-                    Button("Spalte löschen", role: .destructive) {
+                    Button("Delete Column", role: .destructive) {
                         model.vault?.index.boards[boardIndex].columns.removeAll { $0.id == column.id }
                         model.save()
                     }
@@ -204,7 +204,7 @@ private struct ColumnView: View {
                 }
                 .padding(2)
             }
-            TextField("+ Karte hinzufügen", text: $quickAdd)
+            TextField("+ Add card", text: $quickAdd)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
                 .padding(.horizontal, 6)
@@ -225,10 +225,10 @@ private struct ColumnView: View {
             guard let item = items.first, item.hasPrefix("card:") else { return false }
             return moveCard(String(item.dropFirst(5)), to: column.id, at: nil, boardIndex: boardIndex, model: model)
         } isTargeted: { targeted = $0 }
-        .alert("Spalte umbenennen", isPresented: $renaming) {
+        .alert("Rename Column", isPresented: $renaming) {
             TextField("Name", text: $nameInput)
-            Button("Umbenennen") { updateColumn { $0.name = nameInput } }
-            Button("Abbrechen", role: .cancel) {}
+            Button("Rename") { updateColumn { $0.name = nameInput } }
+            Button("Cancel", role: .cancel) {}
         }
     }
 
@@ -261,13 +261,13 @@ private struct CardView: View {
                     Text(card.description).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 }
                 HStack(spacing: 6) {
-                    if card.priority != .none { tag("flag.fill", ["", "Niedrig", "Mittel", "Hoch"][card.priority.rawValue], priorityColor(card.priority)) }
+                    if card.priority != .none { tag("flag.fill", ["", "Low", "Medium", "High"][card.priority.rawValue], priorityColor(card.priority)) }
                     if let due = card.due {
                         let today = Calendar.current.startOfDay(for: Date())
                         let day = Calendar.current.startOfDay(for: due)
                         let overdue = !done && day < today
                         let isToday = !done && day == today
-                        tag("calendar", overdue ? "Überfällig · \(due.formatted(.dateTime.day().month()))" : isToday ? "Heute" : due.formatted(.dateTime.day().month()),
+                        tag("calendar", overdue ? "Overdue · \(due.formatted(.dateTime.day().month()))" : isToday ? "Today" : due.formatted(.dateTime.day().month()),
                             overdue ? .red : isToday ? .orange : .secondary)
                     }
                     if !card.checklist.isEmpty {
@@ -326,25 +326,25 @@ struct CardEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            TextField("Titel", text: $card.title).font(.system(size: 15, weight: .semibold)).textFieldStyle(.plain)
-            TextField("Beschreibung", text: $card.description, axis: .vertical).lineLimit(3...8).textFieldStyle(.roundedBorder)
-            Picker("Priorität", selection: $card.priority) {
-                Text("Keine").tag(Priority.none)
-                Text("Niedrig").tag(Priority.low)
-                Text("Mittel").tag(Priority.medium)
-                Text("Hoch").tag(Priority.high)
+            TextField("Title", text: $card.title).font(.system(size: 15, weight: .semibold)).textFieldStyle(.plain)
+            TextField("Description", text: $card.description, axis: .vertical).lineLimit(3...8).textFieldStyle(.roundedBorder)
+            Picker("Priority", selection: $card.priority) {
+                Text("None").tag(Priority.none)
+                Text("Low").tag(Priority.low)
+                Text("Medium").tag(Priority.medium)
+                Text("High").tag(Priority.high)
             }
             .pickerStyle(.segmented)
             HStack {
-                Toggle("Fällig am", isOn: $hasDue)
+                Toggle("Due", isOn: $hasDue)
                 DatePicker("", selection: $dueDate, displayedComponents: .date).labelsHidden().disabled(!hasDue)
                 Spacer()
-                Picker("Spalte", selection: $columnId) {
+                Picker("Column", selection: $columnId) {
                     ForEach(columns) { c in Text(c.name).tag(c.id) }
                 }
                 .frame(width: 200)
             }
-            Text("Checkliste").font(.system(size: 12, weight: .medium))
+            Text("Checklist").font(.system(size: 12, weight: .medium))
             ForEach($card.checklist) { $item in
                 HStack {
                     Toggle("", isOn: $item.done).labelsHidden()
@@ -352,32 +352,32 @@ struct CardEditor: View {
                     Button { card.checklist.removeAll { $0.id == item.id } } label: { Image(systemName: "xmark") }.buttonStyle(.borderless)
                 }
             }
-            TextField("Punkt hinzufügen (Enter)", text: $newItem)
+            TextField("Add item (Return)", text: $newItem)
                 .textFieldStyle(.roundedBorder)
                 .onSubmit {
                     let t = newItem.trimmingCharacters(in: .whitespaces)
                     if !t.isEmpty { card.checklist.append(ChecklistItem(text: t)) }
                     newItem = ""
                 }
-            Text("Verknüpfte Datei").font(.system(size: 12, weight: .medium))
+            Text("Linked file").font(.system(size: 12, weight: .medium))
             HStack {
                 if let id = card.linkedNodeId, let node = model.drive?.get(id) {
                     Button { Opener.open(node, model: model) } label: {
                         Label(node.name, systemImage: FileTypes.symbol(FileTypes.category(node)))
                     }
-                    Button { card.linkedNodeId = nil } label: { Image(systemName: "xmark") }.help("Verknüpfung entfernen")
+                    Button { card.linkedNodeId = nil } label: { Image(systemName: "xmark") }.help("Remove link")
                 } else {
-                    Button { pickingFile = true } label: { Label("Datei verknüpfen", systemImage: "paperclip") }
+                    Button { pickingFile = true } label: { Label("Link a File", systemImage: "paperclip") }
                 }
             }
             HStack {
-                IconButton(symbol: "trash", help: "Karte löschen") { done(.delete(card.id)) }
+                IconButton(symbol: "trash", help: "Delete Card") { done(.delete(card.id)) }
                 Spacer()
-                Button("Abbrechen") { done(.cancel) }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
-                Button("Speichern") {
+                Button("Cancel") { done(.cancel) }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
+                Button("Save") {
                     card.due = hasDue ? dueDate : nil
                     card.checklist = card.checklist.filter { !$0.text.trimmingCharacters(in: .whitespaces).isEmpty }
-                    if card.title.trimmingCharacters(in: .whitespaces).isEmpty { card.title = "Ohne Titel" }
+                    if card.title.trimmingCharacters(in: .whitespaces).isEmpty { card.title = "Untitled" }
                     done(.save(card, columnId))
                 }
                 .keyboardShortcut(.defaultAction)
@@ -405,16 +405,16 @@ struct VaultFileList: View {
     var body: some View {
         let files = (model.drive?.allFiles() ?? []).filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) }
         VStack(alignment: .leading, spacing: 10) {
-            Text("Datei verknüpfen").font(.system(size: 15, weight: .semibold))
-            TextField("Suchen", text: $search).textFieldStyle(.roundedBorder)
+            Text("Link a file").font(.system(size: 15, weight: .semibold))
+            TextField("Search", text: $search).textFieldStyle(.roundedBorder)
             List(files, selection: $selected) { node in
                 Label(node.name, systemImage: FileTypes.symbol(FileTypes.category(node))).tag(node.id)
             }
             .frame(height: 320)
             HStack {
                 Spacer()
-                Button("Abbrechen") { done(nil) }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
-                Button("Verknüpfen") { done(selected.flatMap { model.drive?.get($0) }) }
+                Button("Cancel") { done(nil) }.keyboardShortcut(.cancelAction).buttonStyle(.xQuiet)
+                Button("Link") { done(selected.flatMap { model.drive?.get($0) }) }
                     .keyboardShortcut(.defaultAction).buttonStyle(.xPrimary).disabled(selected == nil)
             }
         }

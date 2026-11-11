@@ -221,7 +221,7 @@ public struct Board: Identifiable, Hashable, Codable {
 
     public static func makeDefault(_ name: String) -> Board {
         var b = Board(name: name)
-        b.columns = [BoardColumn(name: "Offen"), BoardColumn(name: "In Arbeit"), BoardColumn(name: "Erledigt", isDone: true)]
+        b.columns = [BoardColumn(name: "To do"), BoardColumn(name: "In progress"), BoardColumn(name: "Done", isDone: true)]
         return b
     }
 
@@ -247,6 +247,8 @@ public struct AppSettings: Hashable, Codable {
     public var screenProtection: Bool = true
     /// Spell checking in the Writer runs through macOS, so it is off unless chosen.
     public var spellCheck: Bool = false
+    /// Exported photos, PDFs and Office files lose author, device and location data. The vault keeps the originals.
+    public var stripMetadata: Bool = true
     /// Which stricter defaults this vault has already been moved to. Missing in older vaults.
     public var defaultsVersion: Int = AppSettings.currentDefaultsVersion
     public static let currentDefaultsVersion = 1
@@ -257,6 +259,7 @@ public struct AppSettings: Hashable, Codable {
         case theme = "Theme", autoLockMinutes = "AutoLockMinutes", gridView = "GridView", sortBy = "SortBy"
         case sortDescending = "SortDescending", showDetails = "ShowDetails", lastBoardId = "LastBoardId"
         case screenProtection = "ScreenProtection", spellCheck = "SpellCheck", defaultsVersion = "DefaultsVersion"
+        case stripMetadata = "StripMetadataOnExport"
     }
 
     public init(from decoder: Decoder) throws {
@@ -271,6 +274,7 @@ public struct AppSettings: Hashable, Codable {
         screenProtection = try c.decodeIfPresent(Bool.self, forKey: .screenProtection) ?? true
         spellCheck = try c.decodeIfPresent(Bool.self, forKey: .spellCheck) ?? false
         defaultsVersion = try c.decodeIfPresent(Int.self, forKey: .defaultsVersion) ?? 0
+        stripMetadata = try c.decodeIfPresent(Bool.self, forKey: .stripMetadata) ?? true
     }
 }
 
@@ -338,7 +342,7 @@ public enum XJSON {
             let c = try dec.singleValueContainer()
             let s = try c.decode(String.self)
             guard let date = DateCoding.parse(s) else {
-                throw DecodingError.dataCorruptedError(in: c, debugDescription: "Ungültiges Datum: \(s)")
+                throw DecodingError.dataCorruptedError(in: c, debugDescription: "Invalid date: \(s)")
             }
             return date
         }

@@ -14,8 +14,8 @@ public struct PageSetup: Equatable {
 
     public static let formats = ["A4", "A5", "Letter"]
     public static let marginPresets: [(name: String, top: Double, bottom: Double, left: Double, right: Double)] = [
-        ("Normal", 2.5, 2.0, 2.5, 2.5), ("Schmal", 1.27, 1.27, 1.27, 1.27), ("Moderat", 2.54, 2.54, 1.91, 1.91),
-        ("Breit", 2.54, 2.54, 5.08, 5.08), ("DIN 5008 Brief", 4.5, 2.0, 2.5, 2.0),
+        ("Normal", 2.5, 2.0, 2.5, 2.5), ("Narrow", 1.27, 1.27, 1.27, 1.27), ("Moderate", 2.54, 2.54, 1.91, 1.91),
+        ("Wide", 2.54, 2.54, 5.08, 5.08), ("Letter (DIN 5008)", 4.5, 2.0, 2.5, 2.0),
     ]
 
     public var sizeCm: (width: Double, height: Double) {
@@ -104,8 +104,8 @@ public enum DocxPage {
             var paragraphs: [String] = []
             if !page.footer.isEmpty { paragraphs.append(run(page.footer)) }
             if page.pageNumbers {
-                paragraphs.append(#"<w:pPr><w:jc w:val="right"/></w:pPr>"# + run("Seite ") + #"<w:fldSimple w:instr=" PAGE ">"# + run("1") + "</w:fldSimple>"
-                                  + run(" von ") + #"<w:fldSimple w:instr=" NUMPAGES ">"# + run("1") + "</w:fldSimple>")
+                paragraphs.append(#"<w:pPr><w:jc w:val="right"/></w:pPr>"# + run("Page ") + #"<w:fldSimple w:instr=" PAGE ">"# + run("1") + "</w:fldSimple>"
+                                  + run(" of ") + #"<w:fldSimple w:instr=" NUMPAGES ">"# + run("1") + "</w:fldSimple>")
             }
             entries.append((footerPart, Data(hfXML("ftr", paragraphs: paragraphs).utf8)))
             rels = rels.replacingOccurrences(of: "</Relationships>", with: #"<Relationship Id="rIdXtoolFooter" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer_xtool.xml"/></Relationships>"#)
@@ -158,9 +158,9 @@ public enum DocxPage {
 
     // MARK: zip
 
-    private typealias Entry = (path: String, data: Data)
+    typealias Entry = (path: String, data: Data)
 
-    private static func allEntries(_ data: Data) -> [Entry]? {
+    static func allEntries(_ data: Data) -> [Entry]? {
         guard let archive = try? Archive(data: data, accessMode: .read, pathEncoding: nil) else { return nil }
         var result: [Entry] = []
         for e in archive where e.type == .file {
@@ -172,7 +172,7 @@ public enum DocxPage {
     }
 
     /// A fresh archive: [Content_Types].xml and _rels/.rels first (some readers expect that), deflated, no data descriptors.
-    private static func pack(_ entries: [Entry]) -> Data? {
+    static func pack(_ entries: [Entry]) -> Data? {
         func rank(_ p: String) -> Int { p == "[Content_Types].xml" ? 0 : p == "_rels/.rels" ? 1 : 2 }
         let ordered = entries.enumerated().sorted { (rank($0.element.path), $0.offset) < (rank($1.element.path), $1.offset) }.map(\.element)
         guard let archive = try? Archive(data: Data(), accessMode: .create, pathEncoding: nil) else { return nil }

@@ -70,8 +70,8 @@ enum TestTour {
         guard let controller = WriterController.lastCreated, let tv = controller.textView,
               let lm = tv.layoutManager, let container = tv.textContainer as? PageTextContainer else { print("FAIL paging setup"); return }
         controller.page.pageNumbers = true
-        controller.page.footer = "Fußzeile"
-        controller.page.header = "Kopfzeile"
+        controller.page.footer = "Footer"
+        controller.page.header = "Header"
         controller.applyPage()
         await wait(1.5)
         print("INFO empty document pages: \(tv.pageCount), size: \(Int(tv.frame.width))×\(Int(tv.frame.height))")
@@ -121,10 +121,10 @@ enum TestTour {
             let types = NSPasteboard.general.types?.map(\.rawValue) ?? []
             print("INFO copied: changed \(NSPasteboard.general.changeCount != before), text ok \(NSPasteboard.general.string(forType: .string)?.hasPrefix("Zeile") == true), concealed \(types.contains("org.nspasteboard.ConcealedType"))")
             ClipboardGuard.shared.clearIfOurs()
-            print("INFO clipboard after lock: \(NSPasteboard.general.string(forType: .string) == nil ? "leer" : "NICHT LEER")")
+            print("INFO clipboard after lock: \(NSPasteboard.general.string(forType: .string) == nil ? "empty" : "NOT EMPTY")")
         }
         if #available(macOS 15.0, *) { print("INFO writing tools off: \(tv.writingToolsBehavior == .none), spelling off: \(!tv.isContinuousSpellCheckingEnabled), restorable: \(tv.window?.isRestorable == true)") }
-        print("INFO services for this text: \(tv.validRequestor(forSendType: .string, returnType: nil) == nil ? "keine" : "VORHANDEN")")
+        print("INFO services for this text: \(tv.validRequestor(forSendType: .string, returnType: nil) == nil ? "none" : "PRESENT")")
 
         // scroll to the end of page 1, where the break can be seen
         let breakY = container.pageStride - 200
@@ -138,7 +138,7 @@ enum TestTour {
         let pdf = controller.pdfData()
         let doc = PDFDocument(data: pdf)
         let pageSize = doc?.page(at: 0)?.bounds(for: .mediaBox).size ?? .zero
-        print("INFO pdf pages: \(doc?.pageCount ?? -1) (editor \(tv.pageCount)), size \(Int(pageSize.width))×\(Int(pageSize.height)), footer on page 2: \(doc?.page(at: 1)?.string?.contains("Seite 2 von") == true), first page ends with line: \(doc?.page(at: 0)?.string?.contains("Zeile \(n > 3 ? 3 : 1)") == true)")
+        print("INFO pdf pages: \(doc?.pageCount ?? -1) (editor \(tv.pageCount)), size \(Int(pageSize.width))×\(Int(pageSize.height)), footer on page 2: \(doc?.page(at: 1)?.string?.contains("Page 2 of") == true), first page ends with line: \(doc?.page(at: 0)?.string?.contains("Zeile \(n > 3 ? 3 : 1)") == true)")
         if let folder, let pdfData = doc?.dataRepresentation() {
             try? pdfData.write(to: URL(fileURLWithPath: folder).appendingPathComponent("paging.pdf"))
         }
@@ -256,7 +256,7 @@ enum TestTour {
             snap("1\(i)-\(section.rawValue)")
         }
         model.show(.drive)
-        model.openTab(DocTab(id: "new-tour", kind: .writer, title: "Rechnung", writer: WriterRequest(nodeId: nil, folderId: nil, template: "invoice")))
+        model.openTab(DocTab(id: "new-tour", kind: .writer, title: "Invoice", writer: WriterRequest(nodeId: nil, folderId: nil, template: "invoice")))
         await wait(3)
         snap("20-writer")
         await pagingCheck(model)
@@ -274,7 +274,7 @@ enum TestTour {
             snap("22-keine-vorschau")
             model.activeTabId = nil
         }
-        model.transfer = TransferState(title: "Dateien werden verschlüsselt", detail: "3 von 12: Film.mov", fraction: 0.42)
+        model.transfer = TransferState(title: "Encrypting files", detail: "3 of 12: Film.mov", fraction: 0.42)
         await wait(1)
         snap("23-fortschritt")
         model.transfer = nil

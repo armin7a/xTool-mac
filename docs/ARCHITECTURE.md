@@ -1,48 +1,54 @@
-# Aufbau
+# Architecture
 
 ```
 Sources/
-  XToolCore/          Tresor und Logik, ohne Oberfläche
-    Crypto/           Aead (kleine Werte), KeyDerivation (Argon2id), BlobCipher (Dateien, blockweise)
-    Vault/            Vault (Dateien auf der Platte), Backup, LoginGuard
-    Files/            Drive (Ordner, Papierkorb, Versionen), DriveRecovery
-    Model/            Datenmodell des Index
+  XToolCore/          Vault and logic, no user interface
+    Crypto/           Aead (small values), KeyDerivation (Argon2id), BlobCipher (files, chunk by chunk), SecretKey
+    Vault/            Vault (files on disk), Backup, LoginGuard
+    Files/            Drive (folders, trash, versions), DriveRecovery, MetadataScrubber
+    Model/            Data model of the index
     Password/         PasswordPolicy, PasswordGenerator, WordLists
-    Documents/        Seitenformat von .docx
-  XTool/              Die App
-    App/              Start, AppModel (App-Zustand), MainView (Fenster), TestTour
+    Documents/        Page format of .docx
+  XTool/              The app
+    App/              Launch, AppModel (app state), MainView (window), TestTour
     Security/         AutoLock, ScreenGuard, ClipboardGuard, PrivateTextView, ProcessHardening
-    Design/           Farben, Logo, Buttons, gemeinsame Bausteine: das ganze Aussehen an einer Stelle
-    Auth/             Einrichten, Anmelden, Passwortfelder
-    Files/            FilesView, Transfers (Import, Export, Kopie, Sicherung), FileTypes, VersionsView
-    Viewers/          PDF, Bild, Text, Office, Dateien ohne Vorschau
-    Writer/           Dokument-Editor
+    Design/           Colors, logo, buttons, shared building blocks: the whole look in one place
+    Auth/             Setup, sign-in, password fields
+    Files/            FilesView, Transfers (import, export, copy, backup), FileTypes, VersionsView
+    Viewers/          PDF, image, text, Office, files without a preview
+    Writer/           Document editor
     Notes/ Tasks/ Settings/
 Tests/
-  XToolCoreTests/     Tests mit eigenem kleinem Test-Runner
-  Fixtures/           Eingefrorene Tresore alter Versionen: müssen sich für immer öffnen lassen
-Vendor/               libsodium (Argon2id) und ZIPFoundation, fest eingecheckt
-Resources/            Logo (Original und Zuschnitt)
+  XToolCoreTests/     Tests with their own small test runner
+  Fixtures/           Frozen vaults from older versions: they must open forever
+Vendor/               libsodium (Argon2id) and ZIPFoundation, checked in
+Resources/            Logo (original and cropped)
 Scripts/              compile.sh, build_app.sh, run_tests.sh, run_dev.sh, make_icon.swift
-docs/                 Diese Datei und das Tresor-Format
+docs/                 This file, the vault format and the threat model
 ```
 
-## Regeln, die den Code zusammenhalten
+## Rules that hold the code together
 
-- **Nur `XToolCore` fasst Tresordateien an.** Die App arbeitet ausschließlich über `Vault` und `Drive`.
-- **Große Daten laufen als Strom.** `Vault.importBlob`, `exportBlob` und `copyBlob` halten nie mehr als einen Block im Speicher. `readBlob` lädt alles und ist nur für kleine Inhalte gedacht; `FileTypes.previewLimit` wacht darüber.
-- **Erst sichern, dann löschen.** Ein ersetzter Inhalt wird erst gelöscht, wenn ein Index ohne ihn auf der Platte liegt (`retireBlob`).
-- **Dateien erscheinen erst, wenn sie vollständig sind.** Alles wird in eine Temp-Datei geschrieben und danach umbenannt. Das gilt auch für Exporte.
-- **Beim Sperren speichern erst die Dokumente**, dann der Index, dann wird der Schlüssel gelöscht (`AppModel.lock`).
-- **Das Aussehen steht in `Design/DesignSystem.swift`.** Farben und Button-Stile werden nur dort definiert.
-- **Mehrzeiliger Text läuft nur über `PrivateTextView`.** So kommen Schreibwerkzeuge, Dienste und Websuche von macOS nicht an den Inhalt. Kein SwiftUI-`TextEditor` verwenden.
+- **Only `XToolCore` touches vault files.** The app works exclusively through `Vault` and `Drive`.
+- **Large data streams.** `Vault.importBlob`, `exportBlob` and `copyBlob` never hold more than one chunk in memory.
+  `readBlob` loads everything and is meant for small content only; `FileTypes.previewLimit` guards it.
+- **Save first, delete later.** Replaced content is only deleted once an index without it is on disk (`retireBlob`).
+- **Files only appear when complete.** Everything is written to a temporary file and renamed afterwards. This applies to exports too.
+- **Exports are cleaned where possible.** `MetadataScrubber` cleans the exported copy, checks it again and only then
+  replaces it. A file that cannot be cleaned is left as it was and reported.
+- **On lock, documents save first**, then the index, then the key is wiped (`AppModel.lock`).
+- **The look lives in `Design/DesignSystem.swift`.** Colors and button styles are only defined there.
+- **Multi-line text only goes through `PrivateTextView`.** That keeps Writing Tools, Services and web search away from the content. Do not use SwiftUI's `TextEditor`.
 
-## Warum eigene Build-Skripte?
+## Why custom build scripts?
 
-`Scripts/compile.sh` ruft direkt den Swift-Compiler auf. Das kommt ohne Netz und ohne Swift Package Manager aus und läuft auch, wenn die installierten Entwicklerwerkzeuge teilweise beschädigt sind. `Package.swift` bleibt, damit sich das Projekt in Xcode öffnen lässt.
+`Scripts/compile.sh` calls the Swift compiler directly. That needs no network and no Swift Package Manager and still works
+when the installed developer tools are partly broken. It also picks the newest macOS SDK the installed compiler can fully use.
+`Package.swift` stays so the project opens in Xcode.
 
-Die Tests nutzen aus demselben Grund weder XCTest noch Swift Testing. Neue Tests kommen in die Liste in `Tests/XToolCoreTests/main.swift`.
+For the same reason the tests use neither XCTest nor Swift Testing. New tests go into the list in `Tests/XToolCoreTests/main.swift`.
 
-## Entwickeln
+## Developing
 
-`bash Scripts/run_dev.sh` startet die App mit einem Wegwerf-Tresor. `bash Scripts/run_dev.sh tour <ordner>` läuft durch alle Bildschirme, prüft Upload, Kopie und Export und speichert von jedem Bildschirm ein Bild. Der echte Tresor wird dabei nicht berührt.
+`bash Scripts/run_dev.sh` starts the app with a throwaway vault. `bash Scripts/run_dev.sh tour <folder>` walks through
+all screens, checks upload, copy and export, and saves a picture of every screen. Your real vault is never touched.

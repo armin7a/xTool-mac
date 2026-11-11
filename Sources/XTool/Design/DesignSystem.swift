@@ -246,8 +246,8 @@ enum Panels {
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = true
-        panel.prompt = "Hinzufügen"
-        panel.message = "Die Dateien werden verschlüsselt in xTool kopiert. Die Originale bleiben, wo sie sind."
+        panel.prompt = "Add"
+        panel.message = "The files are copied into xTool and encrypted. The originals stay where they are."
         return panel.runModal() == .OK ? panel.urls : []
     }
 
@@ -255,10 +255,10 @@ enum Panels {
     @MainActor static func chooseExportFolder(count: Int) -> URL? {
         let warning = NSAlert()
         warning.alertStyle = .warning
-        warning.messageText = "Unverschlüsselt exportieren?"
-        warning.informativeText = "Exportierte Dateien sind außerhalb von xTool nicht mehr geschützt. Jedes Programm und jeder, der Zugriff auf diesen Mac hat, kann sie lesen. Lösche sie, sobald du sie nicht mehr brauchst."
-        warning.addButton(withTitle: "Weiter")
-        warning.addButton(withTitle: "Abbrechen")
+        warning.messageText = "Export unencrypted?"
+        warning.informativeText = "Exported files are no longer protected outside xTool. Every app and anyone with access to this Mac can read them. Delete them as soon as you no longer need them."
+        warning.addButton(withTitle: "Continue")
+        warning.addButton(withTitle: "Cancel")
         guard warning.runModal() == .alertFirstButtonReturn else { return nil }
 
         let panel = NSOpenPanel()
@@ -266,10 +266,10 @@ enum Panels {
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
-        panel.prompt = "Hier speichern"
+        panel.prompt = "Save Here"
         panel.message = count == 1
-            ? "Das Element wird entschlüsselt und liegt dort unverschlüsselt. In xTool bleibt es erhalten."
-            : "\(count) Elemente werden entschlüsselt und liegen dort unverschlüsselt. In xTool bleiben sie erhalten."
+            ? "The item is decrypted and stored there unencrypted. It stays in xTool."
+            : "\(count) items are decrypted and stored there unencrypted. They stay in xTool."
         return panel.runModal() == .OK ? panel.url : nil
     }
 }

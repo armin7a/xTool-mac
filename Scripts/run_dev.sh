@@ -23,7 +23,7 @@ tour|setup)
     ;;
 *)
     cp -R "$ROOT/Tests/Fixtures/vault-format-1" "$VAULT"
-    echo "Test-Passwort: $XTOOL_TEST_PASSWORD"
+    echo "Test password: $XTOOL_TEST_PASSWORD"
     "$BIN"
     ;;
 esac
