@@ -82,4 +82,8 @@ Ausgenommen ist das Logo, daran bleiben alle Rechte vorbehalten (siehe [NOTICE](
 
 ## Sicherheit
 
+- **Verschlüsselung:** AES-256-GCM für alles im Tresor: Dateien, Dokumente, Notizen, Aufgaben und das Inhaltsverzeichnis. Jede Datei hat ihren eigenen Schlüssel, und jede Änderung an den verschlüsselten Daten fällt beim Öffnen auf.
+- **Passwort:** Der Schlüssel entsteht aus deinem Passwort mit Argon2id (1 GB Arbeitsspeicher und 3 Durchgänge pro Versuch). Das macht jeden einzelnen Rateversuch teuer.
+- **Abgeschottet:** Kein Netzwerkzugriff, keine Cloud, keine Telemetrie.
+
 Die Sicherheit von xTool beruht allein auf deinem Passwort, nicht auf geheimem Code. Deshalb kann der Code offen liegen: Jeder darf prüfen, wie verschlüsselt wird ([docs/FORMAT.md](docs/FORMAT.md)). Die Test-Tresore in `Tests/Fixtures/` enthalten nur erfundene Beispieldaten, ihr Passwort steht absichtlich in den Tests.
