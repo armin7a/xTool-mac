@@ -76,6 +76,7 @@ run("RenewalTests.newPasswordReplacesTheOldOne") { try RenewalTests().newPasswor
 run("RenewalTests.wrongPasswordChangesNothing") { try RenewalTests().wrongPasswordChangesNothing() }
 run("RenewalTests.cancellingLeavesTheVaultAsItWas") { try RenewalTests().cancellingLeavesTheVaultAsItWas() }
 run("RenewalTests.crashBeforeTheSwitchIsDiscarded") { try RenewalTests().crashBeforeTheSwitchIsDiscarded() }
+run("RenewalTests.crashWhileStagingIsDiscarded") { try RenewalTests().crashWhileStagingIsDiscarded() }
 run("RenewalTests.crashAfterTheSwitchIsCompletedOnNextStart") { try RenewalTests().crashAfterTheSwitchIsCompletedOnNextStart() }
 run("MetadataTests.photosLoseLocationCameraAndNames") { try MetadataTests().photosLoseLocationCameraAndNames() }
 run("MetadataTests.pdfLosesAuthorAndHiddenXMP") { try MetadataTests().pdfLosesAuthorAndHiddenXMP() }

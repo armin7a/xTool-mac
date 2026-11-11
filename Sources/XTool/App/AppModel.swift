@@ -80,7 +80,13 @@ struct TransferState: Equatable {
 @MainActor
 @Observable
 final class AppModel {
-    var state: AppState = Vault.exists(at: Vault.defaultRoot) ? .locked : .setup
+    /// The one model of the app, for system notifications.
+    static weak var current: AppModel?
+    /// The vault in use: on this Mac or on a USB stick.
+    var location: VaultLocation
+    /// This Mac and every connected drive (refreshed when drives come and go).
+    var locations: [VaultLocation] = VaultLocation.all()
+    var state: AppState
     var revision = 0
     var section: AppSection = .drive
     var currentFolderId: String?
@@ -115,18 +121,23 @@ final class AppModel {
     }
 
     init() {
+        let start = AppModel.startLocation()
+        location = start
+        state = start.exists ? .locked : .setup
+        AppModel.current = self
         autoLock.onLock = { [weak self] in self?.lock(.automatic) }
         autoLock.minutes = { [weak self] in self?.vault?.index.settings.autoLockMinutes ?? 1 }
         // a long upload or export counts as activity
         autoLock.isBusy = { [weak self] in self?.transfer != nil }
         autoLock.start()
         ClipboardGuard.shared.start()
+        watchDrives()
     }
 
     // MARK: lifecycle
 
     func createVault(password: String) async throws {
-        let root = Vault.defaultRoot
+        let root = location.root
         let vault = try await Task.detached(priority: .userInitiated) { try Vault.create(at: root, password: password) }.value
         vault.index.settings.theme = "Dark"
         LoginGuard(vaultRoot: root).reset()
@@ -135,7 +146,7 @@ final class AppModel {
 
     /// Returns false on a wrong password.
     func unlock(password: String) async throws -> Bool {
-        let root = Vault.defaultRoot
+        let root = location.root
         let result: (Vault, Bool) = try await Task.detached(priority: .userInitiated) {
             let v = try Vault.open(at: root)
             let unlocked = try v.unlock(password: password)
@@ -232,7 +243,7 @@ final class AppModel {
         clipboard = ([], false)
         passwordNeedsUpgrade = false
         toast = nil
-        state = Vault.exists(at: Vault.defaultRoot) ? .locked : .setup
+        state = location.exists ? .locked : .setup
         Theme.applyLockScreen()
         revision += 1
     }

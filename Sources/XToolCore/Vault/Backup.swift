@@ -79,13 +79,13 @@ public enum Backup {
     }
 
     /// Replaces the vault folder – but only after the backup was unpacked and proved readable with `password`.
-    /// The previous vault stays next to it as "Vault.vor-Wiederherstellung <date>".
+    /// The previous vault stays next to it as "<folder> before restore <date>".
     @discardableResult
     public static func restore(backup: URL, to vaultRoot: URL, password: String, progress: ((Double) -> Void)? = nil) throws -> RestoreResult {
         let fm = FileManager.default
         let parent = vaultRoot.deletingLastPathComponent()
         try fm.createDirectory(at: parent, withIntermediateDirectories: true)
-        let staging = parent.appendingPathComponent("Vault.restore-tmp", isDirectory: true)
+        let staging = parent.appendingPathComponent("\(vaultRoot.lastPathComponent).restore-tmp", isDirectory: true)
         try? fm.removeItem(at: staging)
         try fm.createDirectory(at: staging, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: staging) }
@@ -117,7 +117,7 @@ public enum Backup {
         var previous: URL?
         if fm.fileExists(atPath: vaultRoot.path) {
             let stamp = Date().formatted(.iso8601.year().month().day().time(includingFractionalSeconds: false).timeSeparator(.omitted).dateTimeSeparator(.space))
-            let url = parent.appendingPathComponent("Vault.vor-Wiederherstellung \(stamp)", isDirectory: true)
+            let url = parent.appendingPathComponent("\(vaultRoot.lastPathComponent) before restore \(stamp)", isDirectory: true)
             try fm.moveItem(at: vaultRoot, to: url)
             previous = url
         }

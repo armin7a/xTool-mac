@@ -536,11 +536,12 @@ public final class Vault {
             try progress?(done, total)
         }
 
-        try Vault.writeDurably(Data(ids.joined(separator: "\n").utf8), to: staging.appendingPathComponent(Vault.keepList))
         try Vault.writeDurably(try sealIndex(snapshot, key: newKey), to: staging.appendingPathComponent("index.bin"))
         var newHeader = try Vault.wrap(masterKey: newKey, password: newPassword ?? password, params: params)
         newHeader.created = header.created
         try Vault.writeDurably(try XJSON.encoder().encode(newHeader), to: staging.appendingPathComponent("vault.json"))
+        // written last: with keep.txt and without vault.json, rekey/ can only mean "committed"
+        try Vault.writeDurably(Data(ids.joined(separator: "\n").utf8), to: staging.appendingPathComponent(Vault.keepList))
 
         // the commit point
         guard rename(staging.appendingPathComponent("vault.json").path, headerURL.path) == 0 else {
@@ -562,13 +563,18 @@ public final class Vault {
     }
 
     /// Completes or discards a renewal that a crash interrupted. Needs no key: it only moves and deletes files.
+    ///
+    /// rekey/ holds, in the order written: blobs, index.bin, vault.json, keep.txt. The commit moves vault.json out;
+    /// finishing deletes keep.txt last. So:
+    /// - vault.json still in rekey/, or no keep.txt: not committed, or already finished. The live vault is complete; rekey/ goes.
+    /// - keep.txt without vault.json: committed. Move the new files in, delete the old ones.
     static func finishInterruptedRenewal(root: URL) throws {
         let fm = FileManager.default
         let staging = root.appendingPathComponent(renewalFolder, isDirectory: true)
         guard fm.fileExists(atPath: staging.path) else { return }
-        // not committed: the live vault is complete and untouched
-        if fm.fileExists(atPath: staging.appendingPathComponent("vault.json").path) {
-            try fm.removeItem(at: staging)
+        let keepURL = staging.appendingPathComponent(keepList)
+        if fm.fileExists(atPath: staging.appendingPathComponent("vault.json").path) || !fm.fileExists(atPath: keepURL.path) {
+            removeLeftovers(staging)
             return
         }
         let blobs = root.appendingPathComponent("blobs", isDirectory: true)
@@ -596,7 +602,18 @@ public final class Vault {
                 if fm.fileExists(atPath: url.path, isDirectory: &isDir), !isDir.boolValue { overwriteAndDelete(url) }
             }
         }
-        try fm.removeItem(at: staging)
+        // keep.txt goes last, then the rest
+        try fm.removeItem(at: keepURL)
+        removeLeftovers(staging)
+    }
+
+    /// Best effort: on exFAT and FAT, macOS keeps hidden "._" companions of files that vanish with them,
+    /// so a recursive delete may stumble over a file that is already gone. What is left is retried on the next start.
+    private static func removeLeftovers(_ folder: URL) {
+        let fm = FileManager.default
+        for _ in 0..<3 {
+            if (try? fm.removeItem(at: folder)) != nil || !fm.fileExists(atPath: folder.path) { return }
+        }
     }
 
     private static func overwriteAndDelete(_ url: URL) {
@@ -652,9 +669,17 @@ public final class Vault {
 
 public enum DiskSpace {
     /// Space macOS can make available on the volume of `url` (includes purgeable data).
+    /// exFAT and FAT sticks report 0 for "important usage", so the plain free space counts too.
     public static func available(at url: URL) -> Int64? {
-        let values = try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
-        return values?.volumeAvailableCapacityForImportantUsage
+        let values = try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey])
+        let important = values?.volumeAvailableCapacityForImportantUsage
+        let plain = values?.volumeAvailableCapacity.map(Int64.init)
+        switch (important, plain) {
+        case let (i?, p?): return max(i, p)
+        case let (i?, nil): return i
+        case let (nil, p?): return p
+        default: return nil
+        }
     }
 
     /// Throws if `bytes` plus a small reserve won't fit.

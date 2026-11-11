@@ -2,7 +2,9 @@
 
 With this description a vault can be decrypted without xTool.
 
-Location: `~/Library/Containers/ch.xtool.app/Data/Library/Application Support/xTool/Vault`
+Location on the Mac: `~/Library/Containers/ch.xtool.app/Data/Library/Application Support/xTool/Vault`
+
+On a USB stick or other drive: the folder `xTool Vault` at the top of the drive. The content is identical.
 
 ```
 vault.json            key parameters and the wrapped master key (plain JSON)
@@ -64,15 +66,16 @@ again with a fresh salt under the new key; the index is sealed with the new key.
 Everything new is first written to `rekey/` inside the vault folder:
 
 ```
-rekey/blobs/ab/abcd…   the re-encrypted blobs
-rekey/keep.txt         IDs of all blobs that belong to the vault afterwards, one per line
+rekey/blobs/ab/abcd…   the re-encrypted blobs              (written first)
 rekey/index.bin        the index sealed with the new key
 rekey/vault.json       the new key, wrapped with the password
+rekey/keep.txt         IDs of all blobs that belong to the vault afterwards, one per line   (written last)
 ```
 
 The commit point is the atomic rename of `rekey/vault.json` to `vault.json`. When a vault is opened:
 
-- `rekey/vault.json` exists: the renewal never committed. `rekey/` is deleted; the vault is unchanged.
-- `rekey/` exists without `vault.json`: the renewal committed. `rekey/index.bin` becomes `index.bin` (and `index.bak`),
+- `rekey/vault.json` exists, or `rekey/keep.txt` does not: the renewal never committed (or has already finished).
+  `rekey/` is deleted; the vault is complete as it is.
+- `rekey/keep.txt` exists without `rekey/vault.json`: the renewal committed. `rekey/index.bin` becomes `index.bin` (and `index.bak`),
   the blobs in `rekey/blobs` replace those in `blobs/`, every blob not listed in `keep.txt` is overwritten and deleted,
-  and `rekey/` is removed. All of this needs no key.
+  then `keep.txt` and the rest of `rekey/` are removed. All of this needs no key.

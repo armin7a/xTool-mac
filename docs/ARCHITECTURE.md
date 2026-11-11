@@ -4,13 +4,13 @@
 Sources/
   XToolCore/          Vault and logic, no user interface
     Crypto/           Aead (small values), KeyDerivation (Argon2id), BlobCipher (files, chunk by chunk), SecretKey
-    Vault/            Vault (files on disk), Backup, LoginGuard
+    Vault/            Vault (files on disk), VaultLocation (this Mac or a USB stick), Backup, LoginGuard
     Files/            Drive (folders, trash, versions), DriveRecovery, MetadataScrubber
     Model/            Data model of the index
     Password/         PasswordPolicy, PasswordGenerator, WordLists
     Documents/        Page format of .docx
   XTool/              The app
-    App/              Launch, AppModel (app state), MainView (window), TestTour
+    App/              Launch, AppModel (app state), Drives (USB sticks), MainView (window), TestTour
     Security/         AutoLock, ScreenGuard, ClipboardGuard, PrivateTextView, ProcessHardening
     Design/           Colors, logo, buttons, shared building blocks: the whole look in one place
     Auth/             Setup, sign-in, password fields
@@ -39,6 +39,8 @@ docs/                 This file, the vault format and the threat model
 - **A new master key never touches the live vault until one atomic rename.** `Vault.renewMasterKey` writes into `rekey/`,
   and `Vault.open` completes or discards an interrupted renewal. While it runs, every read and write fails with `VaultError.busy`
   and an index sealed under an older key is never written.
+- **The vault location is chosen once, at the lock screen.** `AppModel.location` decides; nothing else assumes
+  `Vault.defaultRoot`. Started from a stick (`AppPlace.launchDrive`), xTool uses the stick. Any unmount of that drive locks.
 - **On lock, documents save first**, then the index, then the key is wiped (`AppModel.lock`).
 - **The look lives in `Design/DesignSystem.swift`.** Colors and button styles are only defined there.
 - **Multi-line text only goes through `PrivateTextView`.** That keeps Writing Tools, Services and web search away from the content. Do not use SwiftUI's `TextEditor`.

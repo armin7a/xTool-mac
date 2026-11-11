@@ -34,9 +34,18 @@ struct SetupView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     XLogoMark(size: 96).frame(maxWidth: .infinity)
+                    LocationPicker().frame(maxWidth: .infinity)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Choose a master password").font(.system(size: 20, weight: .semibold))
-                        Text("It encrypts everything in xTool.").font(.system(size: 13)).foregroundStyle(.secondary)
+                        Text(model.location.kind == .drive
+                             ? "It encrypts everything in the vault on “\(model.location.name)”. The vault goes into the folder “\(VaultLocation.folderName)” on the drive."
+                             : "It encrypts everything in xTool.")
+                            .font(.system(size: 13)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    if model.location.isFAT32 {
+                        Label("This drive uses FAT32, which cannot hold files over 4 GB. For larger files, format it as exFAT (any computer) or APFS (Mac only) in Disk Utility first.",
+                              systemImage: "exclamationmark.triangle")
+                            .font(.system(size: 12)).foregroundStyle(XColor.warning).fixedSize(horizontal: false, vertical: true)
                     }
                     NewPasswordForm(password: $password, confirmation: $confirmation, onSubmit: create)
                     Toggle(isOn: $understood) {
@@ -92,12 +101,13 @@ struct LoginView: View {
     @State private var error: String?
     @State private var wait = 0
     @State private var failures = 0
-    private let guardState = LoginGuard(vaultRoot: Vault.defaultRoot)
+    private var guardState: LoginGuard { LoginGuard(vaultRoot: model.location.root) }
 
     var body: some View {
         LockScreen {
             VStack(spacing: 20) {
                 XLogoMark(size: 150)
+                LocationPicker()
                 HStack(spacing: 8) {
                     PasswordField(title: "Password", text: $password, revealed: $revealed, onSubmit: unlock)
                         .disabled(busy)
@@ -121,6 +131,11 @@ struct LoginView: View {
             }
         }
         // counts down only while there is something to wait for: no timer running otherwise
+        .onChange(of: model.location) { _, _ in
+            password = ""
+            error = nil
+            failures += 1 // re-reads the waiting time of the other vault
+        }
         .task(id: failures) {
             wait = Int(ceil(guardState.remainingWait()))
             while wait > 0 {
@@ -159,6 +174,34 @@ struct LoginView: View {
                 self.error = error.localizedDescription
             }
             busy = false
+        }
+    }
+}
+
+// MARK: where the vault is
+
+/// Chooses between the vault on this Mac and vaults on USB sticks. Hidden while there is nothing to choose.
+struct LocationPicker: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        if model.locations.count > 1 || model.location.kind == .drive {
+            Menu {
+                ForEach(model.locations) { place in
+                    Button {
+                        model.choose(place)
+                    } label: {
+                        Label(place.exists ? place.name : "\(place.name) (new vault)",
+                              systemImage: place.kind == .thisMac ? "laptopcomputer" : "externaldrive")
+                    }
+                }
+            } label: {
+                Label(model.location.name, systemImage: model.location.kind == .thisMac ? "laptopcomputer" : "externaldrive")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .help("Choose which vault to open")
         }
     }
 }

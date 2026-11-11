@@ -34,6 +34,7 @@ enum TestTour {
 
     /// A bare binary doesn't come to the front by itself.
     private static func activate() {
+        setvbuf(stdout, nil, _IOLBF, 0) // every line reaches the log, even if the tour is stopped
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         NSApp.windows.first(where: { $0.isVisible })?.makeKeyAndOrderFront(nil)
@@ -195,7 +196,7 @@ enum TestTour {
         await wait(0.3)
         snap("24-upload-laeuft")
         await waitForTransfer(model)
-        guard let drive = model.drive, let folder = drive.children(of: nil).first(where: { $0.name == "Ordner" }) else { print("FAIL import"); return }
+        guard let drive = model.drive, let folder = drive.children(of: nil).first(where: { $0.name == "Ordner" }) else { print("FAIL import: \(model.alert?.title ?? "") \(model.alert?.message ?? "") \(model.toast?.text ?? ""), top level: \(model.drive?.children(of: nil).map(\.name) ?? [])"); return }
         let film = drive.children(of: folder.id).first { $0.name == "Film.mov" }
         print("INFO imported size ok: \(film?.size == 400 << 20)")
 
@@ -223,7 +224,7 @@ enum TestTour {
             snap("32-neuer-schluessel")
             print("INFO renewing blocks the window: \(model.renewingKey)")
             await waitForTransfer(model)
-            print("INFO new key: \(model.alert?.title ?? "no message")")
+            print("INFO new key: \(model.alert?.title ?? "no message") – \(model.alert?.message ?? "")")
             model.alert = nil
             let changed = (try? Data(contentsOf: vault.headerURL)) != header
             let again = outbox.appendingPathComponent("after-new-key")
@@ -237,7 +238,8 @@ enum TestTour {
         }
 
         // locking in the middle of an upload: stops cleanly, the half-written blob disappears
-        let before = model.vault?.allBlobIds().count ?? 0
+        let beforeIds = Set(model.vault?.allBlobIds() ?? [])
+        let before = beforeIds.count
         let vault = model.vault
         let name = "Film 2.mov"
         try? FileManager.default.copyItem(at: big, to: dir.appendingPathComponent(name))
@@ -246,7 +248,9 @@ enum TestTour {
         model.lock(.automatic)
         await waitForTransfer(model)
         await wait(0.5)
-        print("INFO locked mid-upload, state locked: \(model.state == .locked), notice: \(model.lockNotice != nil), no new blob: \((vault?.allBlobIds().count ?? -1) == before)")
+        let extra = Set(vault?.allBlobIds() ?? []).subtracting(beforeIds)
+        let extraInfo = extra.map { id in "\(id.prefix(6)) \(vault.flatMap { try? $0.blobPlaintextSize(id) } ?? -1) bytes" }
+        print("INFO locked mid-upload, state locked: \(model.state == .locked), notice: \(model.lockNotice != nil), no new blob: \((vault?.allBlobIds().count ?? -1) == before) \(extraInfo)")
         await wait(0.5)
         snap("31-gesperrt-mit-hinweis")
     }
@@ -255,6 +259,21 @@ enum TestTour {
         guard enabled else { return }
         activate()
         model.settings.autoLockMinutes = 0 // nobody touches the mouse during the tour
+        print("INFO vault location: \(model.location.name), on a drive \(model.location.kind == .drive), started from it \(model.startedFromDrive), choices \(model.locations.map(\.name))")
+        if env["XTOOL_TEST_UNPLUG"] == "1" {
+            if env["XTOOL_TEST_EJECT"] == "1" {
+                model.lockAndEject() // the button in Settings
+            } else {
+                // the test script ejects the drive now; xTool must lock by itself
+                print("READY-UNPLUG"); fflush(stdout)
+            }
+            for _ in 0..<60 where model.state == .unlocked { await wait(0.5) }
+            await wait(3)
+            print("INFO drive still mounted: \(FileManager.default.fileExists(atPath: model.locations.last?.volume?.path ?? "/nonexistent")), toast \(model.toast?.text ?? "none"), alert \(model.alert?.message ?? "none")")
+            print("INFO after eject: locked \(model.state != .unlocked), key gone \(model.vault == nil), now showing \(model.location.name), notice \(model.lockNotice ?? "none")")
+            print("TOUR done"); fflush(stdout)
+            return
+        }
         if let theme = env["XTOOL_TEST_THEME"] {
             model.settings.theme = theme
             Theme.apply(theme)

@@ -5,6 +5,7 @@ xTool has no network access at all.
 
 - **AES-256-GCM** for everything in the vault, the key derived from your password with **Argon2id** (1 GB of memory per guess)
 - **Metadata removal** on export: photos lose their GPS position and camera data, documents lose author names
+- **Portable:** runs from a USB stick with the vault on the stick, and locks the moment the stick is pulled out
 - **No cloud, no account, no telemetry**, open source under the MIT license
 
 <p align="center">
@@ -18,7 +19,7 @@ xTool has no network access at all.
 
 ## Install
 
-1. Build the app (see [Build it yourself](#build-it-yourself)). This creates `dist/xTool-2.2.0.dmg`.
+1. Build the app (see [Build it yourself](#build-it-yourself)). This creates `dist/xTool-2.3.0.dmg`.
    Every push to `main` also builds a DMG on GitHub (Actions → macOS build → Artifacts).
 2. Open the DMG and drag **xTool** into the Applications folder. An existing vault is kept.
 
@@ -81,6 +82,23 @@ With **Settings → Remove metadata when exporting** turned on (the default), ex
 
 The files inside the vault keep their originals, because for journalists the original metadata can be evidence.
 Videos and other types are exported unchanged. Details: [threat model → Metadata](docs/THREAT_MODEL.md#metadata).
+
+### USB stick
+
+xTool can live on a USB stick together with its vault, like a portable safe:
+
+1. Settings → Vault → **Put xTool on a USB stick** opens the Finder: drag xTool.app onto the stick.
+2. Open xTool.app **on the stick**. It notices where it runs and creates (or opens) the vault in the folder
+   `xTool Vault` on the stick. Nothing of your data is stored on the Mac you use.
+3. To take your files along: create a backup first, then choose **Restore from a Backup** when the stick asks for a new password.
+
+The xTool installed on your Mac also finds sticks with a vault: choose the stick on the lock screen.
+
+- **Pulling the stick out locks xTool at once**, the key is wiped. Use **Lock and Eject** (or **Lock and Quit** when xTool runs
+  from the stick) to be safe; writes are made so that a stick pulled at the wrong moment loses at most the last change.
+- Format the stick as **exFAT** (works on every computer) or **APFS** (Mac only). FAT32 cannot hold files over 4 GB; xTool warns about it.
+- On a Mac that has never run xTool, macOS warns once because the app is not notarized (**System Settings → Privacy & Security → Open Anyway**),
+  and may ask whether xTool may access the removable drive. Only use Macs you trust: see the [threat model](docs/THREAT_MODEL.md#usb-sticks).
 
 ### Backup
 

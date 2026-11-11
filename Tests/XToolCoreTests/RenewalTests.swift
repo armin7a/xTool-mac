@@ -12,7 +12,9 @@ struct RenewalTests {
     }
 
     private func makeVault() throws -> Setup {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent("xtool-renew-\(UUID().uuidString)/Vault")
+        // XTOOL_TEST_DIR runs these on another drive, e.g. an exFAT stick
+        let base = ProcessInfo.processInfo.environment["XTOOL_TEST_DIR"].map { URL(fileURLWithPath: $0) } ?? FileManager.default.temporaryDirectory
+        let root = base.appendingPathComponent("xtool-renew-\(UUID().uuidString)/Vault")
         let vault = try Vault.create(at: root, password: "old password", params: fast)
         let drive = Drive(vault: vault)
         let folder = drive.createFolder(in: nil, name: "Sources")
@@ -118,6 +120,17 @@ struct RenewalTests {
         try Data("garbage".utf8).write(to: staging.appendingPathComponent("blobs/ab/abababababababababababababababab"))
         try Data("{}".utf8).write(to: staging.appendingPathComponent("vault.json"))
         try Data("x".utf8).write(to: staging.appendingPathComponent("keep.txt"))
+        try check(s, password: "old password")
+    }
+
+    func crashWhileStagingIsDiscarded() throws {
+        let s = try makeVault()
+        defer { try? FileManager.default.removeItem(at: s.root.deletingLastPathComponent()) }
+        // interrupted while blobs and the index were written: no vault.json, no keep.txt yet
+        let staging = s.root.appendingPathComponent("rekey")
+        try FileManager.default.createDirectory(at: staging.appendingPathComponent("blobs/ab"), withIntermediateDirectories: true)
+        try Data("garbage".utf8).write(to: staging.appendingPathComponent("blobs/ab/abababababababababababababababab"))
+        try Data("sealed with a key nobody has".utf8).write(to: staging.appendingPathComponent("index.bin"))
         try check(s, password: "old password")
     }
 

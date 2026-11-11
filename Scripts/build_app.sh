@@ -5,8 +5,8 @@ set -euo pipefail
 SCRIPTS="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPTS/compile.sh"
 
-VERSION="2.2.0"
-BUILD_NUMBER="220"
+VERSION="2.3.0"
+BUILD_NUMBER="230"
 BUNDLE_ID="ch.xtool.app"     # must stay: macOS keeps the vault in the container of this id
 DIST="$ROOT/dist"
 SDK="$(pick_sdk)"

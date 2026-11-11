@@ -479,7 +479,7 @@ extension AppModel {
                 }
                 lock()
                 guard vault == nil else { return } // saving failed, the vault stayed open
-                let root = Vault.defaultRoot
+                let root = location.root
                 let pump = ProgressPump { [weak self] permille in self?.setProgress(done: permille, total: 1000) }
                 let result = try await Task.detached(priority: .userInitiated) {
                     try Backup.restore(backup: url, to: root, password: password) { pump.report(Int64($0 * 1000)) }

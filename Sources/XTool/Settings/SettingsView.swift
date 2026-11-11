@@ -86,6 +86,21 @@ struct SettingsView: View {
                 }
 
                 Section("Vault") {
+                    LabeledContent("Location") {
+                        HStack {
+                            Label(model.location.name, systemImage: model.location.kind == .thisMac ? "laptopcomputer" : "externaldrive")
+                                .foregroundStyle(.secondary)
+                            if model.location.kind == .drive {
+                                Button(model.startedFromDrive ? "Lock and Quit" : "Lock and Eject") { model.lockAndEject() }
+                            }
+                        }
+                    }
+                    LabeledContent {
+                        Button("Choose Drive …", action: putOnDrive)
+                    } label: {
+                        Text("Put xTool on a USB stick")
+                        Text("Started from a stick, xTool keeps its vault on the stick and works on any Mac.")
+                    }
                     if let drive = model.drive, let vault = model.vault {
                         let files = drive.allFiles()
                         LabeledContent("Files", value: "\(files.count) · \(FileTypes.size(files.reduce(0) { $0 + $1.size }))")
@@ -121,6 +136,22 @@ struct SettingsView: View {
         panel.nameFieldStringValue = "xTool-Backup-\(Date().formatted(.iso8601.year().month().day())).xvault"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         model.createBackup(to: url)
+    }
+
+    private func putOnDrive() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = false
+        panel.directoryURL = URL(fileURLWithPath: "/Volumes", isDirectory: true)
+        panel.prompt = "Choose"
+        panel.message = "Choose the USB stick or drive for xTool."
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let volume = VaultLocation.drive(containing: url) else {
+            model.alert = AlertInfo(title: "Not a removable drive", message: "Choose a USB stick or another drive, not a folder on this Mac.")
+            return
+        }
+        model.showAppForDrive(volume)
     }
 
     private func exportAll() {

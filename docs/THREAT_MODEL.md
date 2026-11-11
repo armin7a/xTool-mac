@@ -89,6 +89,23 @@ version, thumbnail, note and task again with it. Old copies of `vault.json` then
 So if your old password may be known: change it with the new key option on, then create a fresh backup and delete
 old backups and old Time Machine snapshots of the vault.
 
+## USB sticks
+
+A vault on a USB stick is encrypted exactly like one on the Mac. Losing the stick is like losing a locked Mac: without the password nothing can be read.
+
+What changes when you carry xTool on a stick:
+
+- **The Mac you plug into matters.** On a borrowed, shared or public Mac, spyware or a keylogger could capture your
+  password and everything you open. Use the stick only on Macs you trust. This is the biggest risk of any portable vault.
+- **Traces on that Mac.** macOS creates an empty app folder for xTool (`~/Library/Containers/ch.xtool.app`) and may remember
+  that xTool ran and that it was allowed to use the drive. Your files, file names and password are never stored on that Mac,
+  unless you export files there.
+- **Pulling the stick out** locks xTool and wipes the key immediately. If it happens while xTool writes, at most the last change
+  is lost: every file is written completely first and only then switched in.
+- **When xTool itself runs from the stick**, quit it (Settings → Lock and Quit) before you eject. Pulling the stick from under a running app makes it stop at once.
+- **Copies of the stick** (for example a disk image someone takes while you are away) are as safe as your password; renewing the
+  key (see [Changing the password](#changing-the-password)) makes old copies useless for new content.
+
 ## Hidden vaults
 
 Some tools offer a second, hidden vault that opens with a different password, so you can give up a harmless one under

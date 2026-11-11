@@ -8,5 +8,10 @@
     <!-- Only files you pick or drag in yourself (import, backup). -->
     <key>com.apple.security.files.user-selected.read-write</key>
     <true/>
+    <!-- USB sticks and other drives under /Volumes: the vault can live there. Everything else on the Mac stays closed. -->
+    <key>com.apple.security.temporary-exception.files.absolute-path.read-write</key>
+    <array>
+        <string>/Volumes/</string>
+    </array>
 </dict>
 </plist>
