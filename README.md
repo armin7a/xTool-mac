@@ -78,7 +78,7 @@ Aufbau des Codes: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 xTool ist Open Source unter der [MIT-Lizenz](LICENSE): Du darfst den Code frei verwenden, verändern und weitergeben, auch kommerziell, solange der Lizenzhinweis erhalten bleibt.
 
-Ausgenommen ist das Logo, daran bleiben alle Rechte vorbehalten. Die Bibliotheken in `Vendor/` stehen unter ihren eigenen Lizenzen: libsodium und swift-sodium (ISC), ZIPFoundation (MIT).
+Ausgenommen ist das Logo, daran bleiben alle Rechte vorbehalten (siehe [NOTICE](NOTICE)). Die Bibliotheken in `Vendor/` stehen unter ihren eigenen Lizenzen: libsodium und swift-sodium (ISC), ZIPFoundation (MIT).
 
 ## Sicherheit
 
